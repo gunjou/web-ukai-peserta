@@ -1,0 +1,19 @@
+export const API_ENDPOINTS = {
+  AUTH: {
+    LOGIN: "/api/v2/auth/login",
+    LOGOUT: "/api/v2/auth/logout",
+  },
+
+  USER: {
+    ME: "/api/v2/user/me",
+  },
+
+  MODUL: {
+    MODUL_PESERTA: "/api/v2/modul/peserta",
+  },
+
+  MATERI: {
+    BY_MODUL: (modulId: string, type: "document" | "video") =>
+      `/api/v2/materi/peserta/${modulId}?type=${type}`,
+  },
+};
