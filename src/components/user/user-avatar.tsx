@@ -1,3 +1,4 @@
+// components/user/user-avatar.tsx
 "use client";
 
 import { getInitials } from "@/lib/get-initials";

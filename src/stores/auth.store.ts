@@ -23,8 +23,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
 
     // localStorage
+    localStorage.setItem("ukai-theme", "light");
     localStorage.setItem("access_token", accessToken);
-
     localStorage.setItem("refresh_token", refreshToken);
   },
 

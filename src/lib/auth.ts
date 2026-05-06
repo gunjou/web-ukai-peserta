@@ -8,9 +8,7 @@ export function getAccessToken() {
 }
 
 export function clearAuth() {
-  document.cookie = "access_token=; path=/; max-age=0";
-  document.cookie = "refresh_token=; path=/; max-age=0";
-
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
+  localStorage.removeItem("ukai-theme");
 }

@@ -1,9 +1,10 @@
+// components/dashboard/dashboard-navbar.tsx
 "use client";
 
 import { Bell } from "lucide-react";
 import ThemeToggle from "../shared/theme-toggle";
 import Image from "next/image";
-import UserMenu from "../shared/user-menu";
+import UserMenu from "../user/user-menu";
 
 export default function DashboardNavbar() {
   return (

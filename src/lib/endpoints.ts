@@ -6,6 +6,7 @@ export const API_ENDPOINTS = {
 
   USER: {
     ME: "/api/v2/user/me",
+    CHANGE_PASSWORD: "/api/v2/user/change-password",
   },
 
   MODUL: {

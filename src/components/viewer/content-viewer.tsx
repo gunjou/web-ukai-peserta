@@ -20,17 +20,48 @@ interface Props {
 
 // helper untuk handle embed
 function getEmbedUrl(url: string, type: "document" | "video") {
-  // document (pdf, materi)
+  if (!url) return url;
+
+  const isDrive = url.includes("drive.google.com");
+
+  // =========================
+  // DOCUMENT
+  // =========================
   if (type === "document") {
+    if (isDrive) {
+      const match = url.match(/\/d\/([^/]+)/);
+      if (match && match[1]) {
+        return `https://drive.google.com/file/d/${match[1]}/preview`;
+      }
+    }
+
     return url.replace("/view", "/preview");
   }
 
-  // video (google drive)
+  // =========================
+  // VIDEO
+  // =========================
   if (type === "video") {
-    if (url.includes("drive.google.com")) {
-      const fileId = url.split("/d/")[1]?.split("/")[0];
-      return `https://drive.google.com/file/d/${fileId}/preview`;
+    if (isDrive) {
+      // handle semua format drive
+      const match = url.match(/\/d\/([^/]+)/);
+
+      if (match && match[1]) {
+        return `https://drive.google.com/file/d/${match[1]}/preview`;
+      }
+
+      // fallback kalau bukan format /d/
+      if (url.includes("id=")) {
+        const id = url.split("id=")[1].split("&")[0];
+        return `https://drive.google.com/file/d/${id}/preview`;
+      }
+
+      // fallback terakhir
+      return url.replace("/view", "/preview");
     }
+
+    // non-drive video (mp4 dll)
+    return url;
   }
 
   return url;
@@ -44,6 +75,8 @@ export default function ContentViewer({
   type,
 }: Props) {
   const embedUrl = getEmbedUrl(url, type);
+
+  console.log("Embed URL:", embedUrl); // Debug: cek URL yang dihasilkan
 
   const [user, setUser] = useState<null | {
     name: string;

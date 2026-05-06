@@ -210,6 +210,7 @@ export default function LoginPage() {
               mt-2
               text-center
               text-sm
+              text-white
             "
           >
             Login untuk melanjutkan pembelajaran
@@ -224,6 +225,7 @@ export default function LoginPage() {
               className="
                 text-sm
                 font-medium
+                text-white
               "
             >
               Email
@@ -259,6 +261,7 @@ export default function LoginPage() {
               className="
                 text-sm
                 font-medium
+                text-white
               "
             >
               Password
@@ -302,9 +305,9 @@ export default function LoginPage() {
                 "
               >
                 {showPassword ? (
-                  <EyeOff className="h-5 w-5" />
+                  <EyeOff className="h-5 w-5 text-white" />
                 ) : (
-                  <Eye className="h-5 w-5" />
+                  <Eye className="h-5 w-5 text-white" />
                 )}
               </button>
             </div>
@@ -317,6 +320,7 @@ export default function LoginPage() {
               items-center
               gap-2
               text-sm
+              text-white
             "
           >
             <input
@@ -368,6 +372,7 @@ export default function LoginPage() {
             text-center
             text-sm
             leading-relaxed
+            text-white
           "
         >
           Belum punya akun?
