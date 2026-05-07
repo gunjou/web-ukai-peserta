@@ -1,3 +1,5 @@
+import { handleSessionInvalid } from "./session-handler";
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface RequestOptions extends RequestInit {
@@ -26,6 +28,11 @@ async function request<T>(
 
   if (!response.ok) {
     const error = await response.json().catch(() => null);
+
+    // HANDLE SESSION INVALID
+    if (error?.message.includes("session invalid")) {
+      handleSessionInvalid();
+    }
 
     throw new Error(error?.message || "Terjadi kesalahan");
   }
