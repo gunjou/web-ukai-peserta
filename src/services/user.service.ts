@@ -1,11 +1,6 @@
 import { apiClient } from "@/lib/api-client";
 import { API_ENDPOINTS } from "@/lib/endpoints";
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-}
+import type { User } from "@/types/user";
 
 interface MeResponse {
   status: string;

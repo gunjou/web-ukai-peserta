@@ -12,6 +12,8 @@ import { login } from "@/services/auth.service";
 import { useAuthStore } from "@/stores/auth.store";
 import { useRouter } from "next/navigation";
 import { getAccessToken } from "@/lib/auth";
+import { useUserStore } from "@/stores/user.store";
+import { getMe } from "@/services/user.service";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -25,6 +27,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
 
   const { setAuth } = useAuthStore();
+  const setUser = useUserStore((s) => s.setUser);
   const router = useRouter();
 
   useEffect(() => {
@@ -45,6 +48,13 @@ export default function LoginPage() {
       });
 
       setAuth(result.data.access_token, result.data.refresh_token);
+
+      try {
+        const userRes = await getMe(result.data.access_token);
+        setUser(userRes.data);
+      } catch (e) {
+        console.error("Failed fetch user:", e);
+      }
 
       Swal.fire({
         icon: "success",

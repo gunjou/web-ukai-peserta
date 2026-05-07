@@ -3,7 +3,17 @@ export interface User {
   name: string;
   email: string;
   role: string;
-  classes?: {
+
+  mentorships:
+    | {
+        id: number;
+        mentor_id: number;
+        mentorship_name: string;
+        mentor_name: string;
+      }[]
+    | null;
+
+  classes: {
     id: number;
     name: string;
     id_batch: number;

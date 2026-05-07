@@ -16,5 +16,7 @@ export const API_ENDPOINTS = {
   MATERI: {
     BY_MODUL: (modulId: string, type: "document" | "video") =>
       `/api/v2/materi/peserta/${modulId}?type=${type}`,
+    PRIVATE: (type: "document" | "video") =>
+      `/api/v2/materi/peserta/private?type=${type}`,
   },
 };

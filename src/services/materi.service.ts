@@ -36,3 +36,12 @@ export async function getMateriByModul(
     },
   );
 }
+
+export async function getPrivateMateri(
+  type: "document" | "video",
+  token: string,
+) {
+  return apiClient.get<{ data: Materi[] }>(API_ENDPOINTS.MATERI.PRIVATE(type), {
+    token,
+  });
+}
