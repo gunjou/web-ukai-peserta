@@ -2,7 +2,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import DashboardShell from "@/components/dashboard/dashboard-shell";
 import { getAccessToken } from "@/lib/auth";
@@ -13,17 +13,23 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-
-  const token = typeof window !== "undefined" ? getAccessToken() : null;
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const token = getAccessToken();
+
     if (!token) {
       router.replace("/login");
+      return;
     }
-  }, [token, router]);
 
-  // ⛔ jangan render kalau belum ada token
-  if (!token) return null;
+    // 🔥 beri async boundary
+    setTimeout(() => {
+      setLoading(false);
+    }, 0);
+  }, [router]);
+
+  if (loading) return null;
 
   return <DashboardShell>{children}</DashboardShell>;
 }

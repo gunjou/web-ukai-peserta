@@ -12,3 +12,7 @@ export function clearAuth() {
   localStorage.removeItem("refresh_token");
   localStorage.removeItem("ukai-theme");
 }
+
+export function clearUser() {
+  localStorage.removeItem("user");
+}

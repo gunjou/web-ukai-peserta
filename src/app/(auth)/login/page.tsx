@@ -30,11 +30,6 @@ export default function LoginPage() {
   const setUser = useUserStore((s) => s.setUser);
   const router = useRouter();
 
-  useEffect(() => {
-    document.documentElement.classList.remove("light");
-    document.documentElement.classList.add("dark");
-  }, []);
-
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
 
@@ -63,6 +58,7 @@ export default function LoginPage() {
         confirmButtonColor: "#b0550d",
         background: "#2b0f0f",
         color: "#ffffff",
+        timer: 1000,
       });
 
       setTimeout(() => {
@@ -78,6 +74,7 @@ export default function LoginPage() {
         confirmButtonColor: "#a11d1d",
         background: "#2b0f0f",
         color: "#ffffff",
+        timer: 1500,
       });
     } finally {
       setLoading(false);
@@ -91,9 +88,6 @@ export default function LoginPage() {
       router.replace("/dashboard/modul-materi");
     }
 
-    // 🔥 paksa theme login
-    document.documentElement.classList.remove("light");
-    document.documentElement.classList.add("dark");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

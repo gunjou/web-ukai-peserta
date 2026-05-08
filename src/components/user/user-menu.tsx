@@ -15,10 +15,11 @@ import UserAvatar from "./user-avatar";
 import ProfileModal from "./profile-modal";
 import ChangePasswordModal from "./change-password-modal";
 
-import { getAccessToken, clearAuth } from "@/lib/auth";
+import { getAccessToken, clearAuth, clearUser } from "@/lib/auth";
 import { getMe } from "@/services/user.service";
 
 import type { User } from "@/types/user";
+import Swal from "sweetalert2";
 
 export default function UserMenu() {
   const router = useRouter();
@@ -43,8 +44,31 @@ export default function UserMenu() {
     fetchUser();
   }, []);
 
-  function handleLogout() {
+  async function handleLogout() {
+    const result = await Swal.fire({
+      title: "Yakin ingin logout?",
+      text: "Anda akan keluar dari sesi saat ini",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ya, logout",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#b0550d",
+      cancelButtonColor: "#6b7280",
+      reverseButtons: true,
+    });
+
+    if (!result.isConfirmed) return;
+
     clearAuth();
+    clearUser();
+
+    await Swal.fire({
+      icon: "success",
+      title: "Logout berhasil",
+      timer: 1000,
+      showConfirmButton: false,
+    });
+
     router.replace("/login");
   }
 
@@ -52,7 +76,7 @@ export default function UserMenu() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="outline-none">
+          <button className="outline-none cursor-pointer">
             <UserAvatar name={user?.name} />
           </button>
         </DropdownMenuTrigger>
@@ -62,9 +86,9 @@ export default function UserMenu() {
             Profile
           </DropdownMenuItem>
 
-          {/* <DropdownMenuItem onClick={() => setOpenPassword(true)}>
+          <DropdownMenuItem onClick={() => setOpenPassword(true)}>
             Ubah Password
-          </DropdownMenuItem> */}
+          </DropdownMenuItem>
 
           <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
         </DropdownMenuContent>

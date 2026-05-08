@@ -16,5 +16,5 @@ export async function changePassword(
   data: { old_password: string; new_password: string },
   token: string,
 ) {
-  return apiClient.post(API_ENDPOINTS.USER.CHANGE_PASSWORD, data, { token });
+  return apiClient.put(API_ENDPOINTS.USER.CHANGE_PASSWORD, data, { token });
 }

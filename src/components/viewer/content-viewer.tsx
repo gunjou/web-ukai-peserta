@@ -1,6 +1,11 @@
 "use client";
 
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { getAccessToken } from "@/lib/auth";
 import { getMe } from "@/services/user.service";
@@ -120,6 +125,7 @@ export default function ContentViewer({
       >
         <VisuallyHidden>
           <DialogTitle>{title}</DialogTitle>
+          <DialogDescription></DialogDescription>
         </VisuallyHidden>
 
         {/* HEADER */}

@@ -67,7 +67,7 @@
   --secondary-foreground: #ffffff;
   --muted: oklch(0.96 0 0);
   --muted-foreground: oklch(0.45 0 0);
-  --accent: #a11d1d;
+  --accent: #b0550d;
   --accent-foreground: #ffffff;
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.9 0 0);
@@ -154,11 +154,6 @@
 @layer base {
   * {
     @apply border-border transition-colors duration-200;
-  }
-
-  html {
-    color-scheme: light;
-    scroll-behavior: smooth;
   }
 
   body {

@@ -30,7 +30,7 @@ export default function DashboardNavbar({
         {/* DESKTOP TOGGLE */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="hidden md:flex h-10 w-10 items-center justify-center rounded-xl border bg-card hover:bg-muted transition"
+          className="hidden md:flex h-10 w-10 items-center cursor-pointer justify-center rounded-xl border bg-card hover:bg-muted transition"
         >
           {collapsed ? (
             <ChevronRight className="w-5 h-5" />
@@ -42,12 +42,14 @@ export default function DashboardNavbar({
 
       {/* RIGHT */}
       <div className="flex items-center gap-3">
-        <button className="flex h-10 w-10 items-center justify-center rounded-xl border bg-card hover:bg-muted transition">
+        <button className="flex h-10 w-10 items-center cursor-pointer justify-center rounded-xl border bg-card hover:bg-muted transition">
           <Bell className="h-5 w-5" />
         </button>
 
         <ThemeToggle />
-        <UserMenu />
+        <button className="cursor-pointer">
+          <UserMenu />
+        </button>
       </div>
     </header>
   );

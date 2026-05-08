@@ -37,6 +37,7 @@ export default function ThemeToggle() {
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className="
         flex
+        cursor-pointer
         h-10
         w-10
         items-center
