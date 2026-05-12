@@ -16,6 +16,7 @@ export default function DashboardShell({
 
   useEffect(() => {
     loadUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [collapsed, setCollapsed] = useState<boolean>(() => {

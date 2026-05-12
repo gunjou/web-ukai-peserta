@@ -19,4 +19,8 @@ export const API_ENDPOINTS = {
     PRIVATE: (type: "document" | "video") =>
       `/api/v2/materi/peserta/private?type=${type}`,
   },
+
+  TRYOUT: {
+    LIST: "/api/v2/tryout/peserta",
+  },
 };

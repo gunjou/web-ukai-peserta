@@ -76,21 +76,32 @@ export default function UserMenu() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="outline-none cursor-pointer">
+          <div className="outline-none cursor-pointer">
             <UserAvatar name={user?.name} />
-          </button>
+          </div>
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuItem onClick={() => setOpenProfile(true)}>
+          <DropdownMenuItem
+            onClick={() => setOpenProfile(true)}
+            className="cursor-pointer transition-colors data-[highlighted]:bg-primary data-[highlighted]:text-white"
+          >
             Profile
           </DropdownMenuItem>
 
-          <DropdownMenuItem onClick={() => setOpenPassword(true)}>
+          <DropdownMenuItem
+            onClick={() => setOpenPassword(true)}
+            className="cursor-pointer transition-colors data-[highlighted]:bg-primary data-[highlighted]:text-white"
+          >
             Ubah Password
           </DropdownMenuItem>
 
-          <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={handleLogout}
+            className="cursor-pointer transition-colors data-[highlighted]:bg-primary data-[highlighted]:text-white"
+          >
+            Logout
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 

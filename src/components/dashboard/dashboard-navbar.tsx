@@ -47,7 +47,7 @@ export default function DashboardNavbar({
         </button>
 
         <ThemeToggle />
-        <button className="cursor-pointer">
+        <button className="">
           <UserMenu />
         </button>
       </div>

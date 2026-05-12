@@ -5,41 +5,19 @@ import { Moon, Sun } from "lucide-react";
 
 import { useTheme } from "next-themes";
 
-import { useEffect, useState } from "react";
-
 export default function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
 
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // prevent hydration mismatch
-  if (!mounted) {
-    return (
-      <div
-        className="
-          h-10
-          w-10
-          rounded-xl
-          border
-        "
-      />
-    );
-  }
-
-  const isDark = theme === "dark";
+  const isDark = resolvedTheme === "dark";
 
   return (
     <button
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className="
         flex
-        cursor-pointer
         h-10
         w-10
+        cursor-pointer
         items-center
         justify-center
         rounded-xl

@@ -94,7 +94,8 @@ export default function DashboardSidebar({
 
           {/* indicator */}
           {collapsed && active && (
-            <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-primary rounded-r-full" />
+            // <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-primary rounded-r-full" />
+            <span className="absolute top-1/2 -translate-y-1/2 " />
           )}
 
           {/* badge */}
