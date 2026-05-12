@@ -69,7 +69,7 @@ export default function ChangePasswordModal({ open, onClose }: Props) {
         title: "Berhasil",
         timer: 1000,
         text: "Password berhasil diubah",
-        confirmButtonColor: "#b0550d",
+        confirmButtonColor: "#d38c0e",
       });
 
       setOldPassword("");

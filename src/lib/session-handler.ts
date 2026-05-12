@@ -14,6 +14,7 @@ export function handleSessionInvalid() {
     title: "Session Berakhir",
     text: "Akun Anda login di perangkat lain",
     confirmButtonText: "OK",
+    confirmButtonColor: "#d38c0e",
   }).then(() => {
     window.location.href = "/login";
   });

@@ -52,7 +52,7 @@ export default function UserMenu() {
       showCancelButton: true,
       confirmButtonText: "Ya, logout",
       cancelButtonText: "Batal",
-      confirmButtonColor: "#b0550d",
+      confirmButtonColor: "#d38c0e",
       cancelButtonColor: "#6b7280",
       reverseButtons: true,
     });

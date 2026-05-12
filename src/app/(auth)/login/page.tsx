@@ -55,7 +55,7 @@ export default function LoginPage() {
         icon: "success",
         title: "Login Berhasil",
         text: "Selamat datang kembali",
-        confirmButtonColor: "#b0550d",
+        confirmButtonColor: "#d38c0e",
         background: "#2b0f0f",
         color: "#ffffff",
         timer: 1000,
@@ -369,20 +369,37 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Footer */}
-        <p
-          className="
-            mt-6
-            text-center
-            text-sm
-            leading-relaxed
-            text-white
-          "
-        >
-          Belum punya akun?
-          <br />
-          Hubungi admin untuk mendapatkan akses.
-        </p>
+        {/* Footer Info */}
+        <div className="mt-6 space-y-4">
+          <p
+            className="
+              text-center
+              text-sm
+              leading-relaxed
+              text-white/80
+            "
+          >
+            Belum punya akun?
+            <br />
+            Hubungi admin untuk mendapatkan akses.
+          </p>
+
+          {/* Copyright */}
+          <div
+            className="
+              border-t
+              border-white/10
+              pt-4
+              text-center
+              text-xs
+              text-white/50
+            "
+          >
+            © {new Date().getFullYear()}{" "}
+            <span className="font-medium text-white/70">Outlook Project</span>.
+            All rights reserved.
+          </div>
+        </div>
       </div>
     </main>
   );
