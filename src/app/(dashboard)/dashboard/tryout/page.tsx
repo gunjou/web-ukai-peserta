@@ -47,7 +47,7 @@ export default function TryoutPage() {
       {/* LOADING (SKELETON) */}
       {loading ? (
         <TryoutSkeleton />
-      ) : tryouts.length === 0 ? (
+      ) : tryouts === null ? (
         <EmptyState
           title="Belum Ada Tryout"
           description="Tryout belum tersedia untuk akun Anda."
