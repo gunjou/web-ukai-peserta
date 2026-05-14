@@ -1,25 +1,36 @@
+// services/tryout.service.ts
 import { apiClient } from "@/lib/api-client";
 import { API_ENDPOINTS } from "@/lib/endpoints";
+import {
+  StartTryoutResponse,
+  TryoutAttempt,
+  TryoutResponse,
+} from "@/types/tryout";
 
-export interface Tryout {
-  id: number;
-  title: string;
-  total_soal: number;
-  duration: number;
-  max_attempt: number;
-  access_start_at: string;
-  access_end_at: string;
-  status: "ongoing" | "expired" | "upcoming";
-}
-
-interface TryoutResponse {
-  status: string;
-  message: string;
-  data: Tryout[];
-}
-
+/* GET TRYOUT LIST */
 export async function getTryouts(token: string) {
   return apiClient.get<TryoutResponse>(API_ENDPOINTS.TRYOUT.LIST, {
     token,
   });
+}
+
+/* START TRYOUT */
+export async function startTryout(tryoutId: number, token: string) {
+  return apiClient.post<StartTryoutResponse>(
+    API_ENDPOINTS.TRYOUT.START(tryoutId),
+    {},
+    {
+      token,
+    },
+  );
+}
+
+/* GET ATTEMPT */
+export async function getTryoutAttempt(attemptToken: string, token: string) {
+  return apiClient.get<{ data: TryoutAttempt }>(
+    API_ENDPOINTS.TRYOUT.ATTEMPT(attemptToken),
+    {
+      token,
+    },
+  );
 }

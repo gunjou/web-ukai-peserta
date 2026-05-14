@@ -1,3 +1,4 @@
+// lib/endpoints.ts
 export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: "/api/v2/auth/login",
@@ -22,5 +23,7 @@ export const API_ENDPOINTS = {
 
   TRYOUT: {
     LIST: "/api/v2/tryout/peserta",
+    START: (tryoutId: number) => `/api/v2/tryout/${tryoutId}/start`,
+    ATTEMPT: (attemptToken: string) => `/api/v2/tryout/attempt/${attemptToken}`,
   },
 };

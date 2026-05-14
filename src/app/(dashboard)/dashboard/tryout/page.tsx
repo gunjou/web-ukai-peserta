@@ -5,9 +5,10 @@ import { useEffect, useState } from "react";
 
 import EmptyState from "@/components/shared/empty-state";
 
-import { getTryouts, Tryout } from "@/services/tryout.service";
 import TryoutItem from "@/components/tryout/tryout-item";
 import TryoutSkeleton from "@/components/tryout/tryout-skeleton";
+import { getTryouts } from "@/services/tryout.service";
+import { Tryout } from "@/types/tryout";
 
 export default function TryoutPage() {
   const [tryouts, setTryouts] = useState<Tryout[]>([]);
