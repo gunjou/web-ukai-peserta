@@ -8,6 +8,7 @@ import { Eye, EyeOff } from "lucide-react";
 
 import Swal from "sweetalert2";
 import Image from "next/image";
+import ThemeToggle from "@/components/shared/theme-toggle";
 import { login } from "@/services/auth.service";
 import { useAuthStore } from "@/stores/auth.store";
 import { useRouter } from "next/navigation";
@@ -121,6 +122,10 @@ export default function LoginPage() {
           blur-3xl
         "
       />
+
+      <div className="absolute z-10 top-4 right-4">
+        <ThemeToggle />
+      </div>
 
       <div
         className="
