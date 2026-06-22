@@ -4,6 +4,10 @@ export const APP_ROUTES = {
   DASHBOARD: "/dashboard/modul-materi",
 
   TRYOUT: {
+    LIST: "/dashboard/tryout",
     DETAIL: (id: number) => `/tryout/${id}`,
+    ATTEMPT: (id: number) => `/tryout/${id}/attempt`,
+    RESULT: (id: number) => `/tryout/${id}/result`,
+    HASIL_DETAIL: (token: string) => `/dashboard/hasil/${token}`,
   },
 };

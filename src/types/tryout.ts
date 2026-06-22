@@ -1,13 +1,16 @@
 // types/tryout.ts
+
+/* ========== TRYOUT LIST & DETAIL ========== */
 export interface Tryout {
   id: number;
   title: string;
   total_soal: number;
   duration: number;
   max_attempt: number;
+  remaining_attempt: number;
   access_start_at: string;
   access_end_at: string;
-  status: "ongoing" | "expired" | "upcoming";
+  status: "ongoing" | "upcoming" | "closed" | "expired";
 }
 
 export interface TryoutResponse {
@@ -16,6 +19,7 @@ export interface TryoutResponse {
   data: Tryout[];
 }
 
+/* ========== START TRYOUT ========== */
 export interface StartTryoutResponse {
   status: string;
   message: string;
@@ -28,6 +32,7 @@ export interface StartTryoutResponse {
   };
 }
 
+/* ========== QUESTIONS ========== */
 export interface TryoutQuestion {
   id: number;
   nomor: number;
@@ -40,4 +45,80 @@ export interface TryoutAttempt {
   duration: number;
   remaining_time: number;
   questions: TryoutQuestion[];
+}
+
+/* ========== ANSWERS ========== */
+export interface Answer {
+  answer: string | null; // 'A' | 'B' | 'C' | 'D' | 'E' | null
+  ragu: boolean;
+}
+
+export interface AnswersMap {
+  [questionId: number]: Answer;
+}
+
+export interface SaveAnswersRequest {
+  answers: AnswersMap;
+}
+
+/* ========== SUBMIT RESULT ========== */
+export interface TryoutResult {
+  score: number;
+  benar: number;
+  salah: number;
+  kosong: number;
+  ragu_ragu: number;
+  attempt_token?: string;
+}
+
+export interface SubmitAttemptResponse {
+  status: string;
+  message: string;
+  data: TryoutResult;
+}
+
+/* ========== RESULT HISTORY ========== */
+export interface TryoutResultItem {
+  attempt_token: string;
+  title: string;
+  score: number;
+  benar: number;
+  salah: number;
+  kosong: number;
+  ragu: number;
+  attempt_ke: number;
+  tanggal: string;
+}
+
+export interface TryoutResultsResponse {
+  status: string;
+  message: string;
+  data: TryoutResultItem[];
+}
+
+/* ========== REPORT / REVIEW ========== */
+export interface TryoutReportQuestion {
+  id: number;
+  nomor: number;
+  pertanyaan: string;
+  pilihan: Record<string, string>;
+  correct_answer: string;
+  user_answer: string | null;
+  status: "benar" | "salah" | "kosong";
+  is_ragu: boolean;
+  pembahasan: string | null;
+}
+
+export interface TryoutReportResponse {
+  status: string;
+  message: string;
+  data: TryoutReportQuestion[];
+}
+
+/* ========== SESSION PERSISTENCE ========== */
+export interface SessionState {
+  attemptToken: string;
+  answers: AnswersMap;
+  currentIndex: number;
+  endTime: number;
 }

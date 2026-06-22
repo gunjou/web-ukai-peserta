@@ -16,30 +16,34 @@ export default function DashboardShell({
 
   useEffect(() => {
     loadUser();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
-
     const saved = localStorage.getItem("sidebar-collapsed");
-
-    if (saved !== null) {
-      return saved === "true";
-    }
-
+    if (saved !== null) return saved === "true";
     return window.innerWidth < 1024;
   });
 
   return (
-    <div className="flex min-h-screen bg-background">
+    // 1. Ganti min-h-screen menjadi h-screen overflow-hidden agar base layout membeku
+    <div className="flex h-screen w-screen overflow-hidden bg-background">
+      {/* SIDEBAR — Sekarang tingginya akan otomatis mengikuti h-screen dari parent */}
       <DashboardSidebar collapsed={collapsed} />
 
-      <div className="flex flex-1 flex-col">
+      {/* SISI KANAN (NAVBAR + MAIN CONTENT) */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* NAVBAR — Tetap aman di atas karena pembungkusnya overflow-hidden */}
         <DashboardNavbar collapsed={collapsed} setCollapsed={setCollapsed} />
 
-        <main className="flex-1 p-4 md:p-6 pb-20 md:pb-6">{children}</main>
+        {/* MAIN CONTENT — 2. Tambahkan overflow-y-auto dan h-full / min-h-0
+          Di sinilah satu-satunya area scroll halaman dashboard Anda terjadi!
+        */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
+          {children}
+        </main>
       </div>
+
       {/* MOBILE */}
       <div className="md:hidden">
         <MobileBottomNav />

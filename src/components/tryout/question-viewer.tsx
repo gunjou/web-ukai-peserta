@@ -1,64 +1,47 @@
-import { TryoutQuestion } from "@/types/tryout";
+"use client";
+
+import { TryoutQuestion, Answer } from "@/types/tryout";
+import QuestionCard from "./question-card";
+import OptionCard from "./option-card";
 
 interface Props {
   question: TryoutQuestion;
+  answer: Answer | undefined;
+  onSelectAnswer: (option: string) => void;
 }
 
-export default function QuestionViewer({ question }: Props) {
+export default function QuestionViewer({
+  question,
+  answer,
+  onSelectAnswer,
+}: Props) {
+  const options = ["A", "B", "C", "D", "E"];
+
   return (
-    <div className="space-y-6">
-      {/* QUESTION */}
-      <div
-        className="
-          prose
-          max-w-none
-          dark:prose-invert
-        "
-        dangerouslySetInnerHTML={{
-          __html: question.pertanyaan,
-        }}
-      />
+    <div className="w-full">
+      <div className="space-y-10">
+        {/* Question */}
+        <QuestionCard question={question} />
+        {/* Divider */}
+        <div className="border-t pt-2" />
+        {/* Options */}
+        <div className="space-y-4">
+          {options.map((option) => {
+            const optionText = question?.pilihan?.[option];
 
-      {/* OPTIONS */}
-      <div className="space-y-3">
-        {Object.entries(question.pilihan).map(([key, value]) => (
-          <button
-            key={key}
-            className="
-                flex
-                w-full
-                items-start
-                gap-3
-                rounded-xl
-                border
-                bg-card
-                p-4
-                text-left
-                transition-all
-                hover:border-primary
-                hover:bg-primary/5
-              "
-          >
-            <div
-              className="
-                  flex
-                  h-7
-                  w-7
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-full
-                  border
-                  text-sm
-                  font-semibold
-                "
-            >
-              {key}
-            </div>
+            if (!optionText) return null;
 
-            <span>{value}</span>
-          </button>
-        ))}
+            return (
+              <OptionCard
+                key={option}
+                option={option}
+                text={optionText}
+                selected={answer?.answer === option}
+                onPress={() => onSelectAnswer(option)}
+              />
+            );
+          })}
+        </div>
       </div>
     </div>
   );

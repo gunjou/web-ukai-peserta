@@ -1,0 +1,445 @@
+// app/(tryout)/tryout/[id]/attempt/page.tsx
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter, useParams } from "next/navigation";
+import TryoutHeader from "@/components/tryout/tryout-header";
+import QuestionNavigation from "@/components/tryout/question-navigation";
+import QuestionViewer from "@/components/tryout/question-viewer";
+import TryoutFooter from "@/components/tryout/tryout-footer";
+import QuestionPaletteModal from "@/components/tryout/question-palette-modal";
+
+import {
+  getTryoutAttempt,
+  startTryout,
+  saveAttemptAnswers,
+  submitAttempt,
+} from "@/services/tryout.service";
+
+import { TryoutAttempt, AnswersMap, SessionState } from "@/types/tryout";
+
+const STORAGE_KEY = "ACTIVE_TRYOUT_SESSION";
+
+export default function TryoutAttemptPage() {
+  const router = useRouter();
+  const params = useParams();
+  const tryoutId = Number(params.id);
+
+  // State
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState<TryoutAttempt | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [answers, setAnswers] = useState<AnswersMap>({});
+  const [remainingTime, setRemainingTime] = useState(0);
+  const [endTime, setEndTime] = useState<number | null>(null);
+  const [paletteVisible, setPaletteVisible] = useState(false);
+  const [submitVisible, setSubmitVisible] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Initialize tryout
+  useEffect(() => {
+    initTryout();
+  }, [tryoutId]);
+
+  async function initTryout() {
+    try {
+      setError(null);
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        setError("Token tidak ditemukan. Silakan login ulang.");
+        setLoading(false);
+        return;
+      }
+
+      // Check if there's an existing valid session
+      const sessionStr = localStorage.getItem(STORAGE_KEY);
+      let hasValidSession = false;
+      //     let attemptToken = localStorage.getItem("attempt_token");
+
+      if (sessionStr && attemptToken) {
+        try {
+          const session: SessionState = JSON.parse(sessionStr);
+          // Check if session is still valid (endTime hasn't passed)
+          if (session.endTime && session.endTime > Date.now()) {
+            // Valid session exists - restore it
+            setAnswers(session.answers || {});
+            setCurrentIndex(session.currentIndex || 0);
+            setEndTime(session.endTime);
+            hasValidSession = true;
+
+            // Just fetch questions to verify
+            const attemptRes = await getTryoutAttempt(
+              session.attemptToken,
+              token
+            );
+            setAttempt(attemptRes.data);
+          }
+        } catch (e) {
+          console.error("Failed to restore session:", e);
+          // Session invalid, clear it and create new
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem("attempt_token");
+        }
+      }
+
+      // If no valid session, start new attempt
+      if (!hasValidSession) {
+        console.log("Creating new attempt...");
+        const startRes = await startTryout(tryoutId, token);
+        const newAttemptToken = startRes.data.attempt_token;
+        const durationSeconds = startRes.data.duration * 60;
+        const newEndTime = Date.now() + durationSeconds * 1000;
+
+        // Save attempt token
+        localStorage.setItem("attempt_token", newAttemptToken);
+
+        // Fetch questions
+        const attemptRes = await getTryoutAttempt(newAttemptToken, token);
+        setAttempt(attemptRes.data);
+        setEndTime(newEndTime);
+
+        // Create and persist initial session
+        const initialSession: SessionState = {
+          attemptToken: newAttemptToken,
+          answers: {},
+          currentIndex: 0,
+          endTime: newEndTime,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(initialSession));
+      }
+    } catch (error) {
+      console.error("Init error:", error);
+      const errorMsg =
+        error instanceof Error ? error.message : "Gagal memulai tryout";
+      setError(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Persist session to localStorage
+  function persistSession() {
+    if (!endTime) return;
+
+    const attemptToken = localStorage.getItem("attempt_token");
+    if (!attemptToken) return;
+
+    const session: SessionState = {
+      attemptToken,
+      answers,
+      currentIndex,
+      endTime,
+    };
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  }
+
+  // Timer countdown
+  useEffect(() => {
+    if (!endTime) return;
+
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
+      setRemainingTime(remaining);
+
+      // Auto-submit when time runs out
+      if (remaining === 0 && !submitting && attempt && !loading) {
+        console.log("Time's up, auto-submitting...");
+        handleSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [endTime, submitting, attempt, loading]);
+
+  // Persist answers changes
+  useEffect(() => {
+    persistSession();
+  }, [answers, currentIndex, endTime]);
+
+  // Auto-save to server every 10 seconds
+  useEffect(() => {
+    if (!endTime || Object.keys(answers).length === 0) return;
+
+    const autoSaveInterval = setInterval(async () => {
+      const token = localStorage.getItem("access_token");
+      const attemptToken = localStorage.getItem("attempt_token");
+
+      if (!token || !attemptToken) return;
+
+      try {
+        await saveAttemptAnswers(attemptToken, answers, token);
+        console.log("Auto-saved");
+      } catch (error) {
+        console.error("Auto-save failed:", error);
+      }
+    }, 10000);
+
+    return () => clearInterval(autoSaveInterval);
+  }, [answers, endTime]);
+
+  function handleSelectAnswer(option: string) {
+    const questionId = attempt?.questions[currentIndex]?.id;
+    if (!questionId) return;
+
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: {
+        ...prev[questionId],
+        answer: option,
+      },
+    }));
+  }
+
+  function handleToggleRagu(questionId: number) {
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: {
+        ...prev[questionId],
+        ragu: !prev[questionId]?.ragu,
+      },
+    }));
+  }
+
+  async function handleSubmit() {
+    if (submitting || !attempt) return;
+
+    setSubmitting(true);
+
+    try {
+      const token = localStorage.getItem("access_token");
+      const attemptToken = localStorage.getItem("attempt_token");
+
+      if (!token || !attemptToken) {
+        setError("Token tidak ditemukan");
+        return;
+      }
+
+      // Save final answers
+      await saveAttemptAnswers(attemptToken, answers, token);
+
+      // Submit attempt
+      const result = await submitAttempt(attemptToken, token);
+
+      // Clear session
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem("attempt_token");
+
+      // Navigate to result
+      router.replace(
+        `/tryout/${tryoutId}/result?token=${attemptToken}&score=${result.data.score}`
+      );
+    } catch (error) {
+      console.error("Submit failed:", error);
+      setError(error instanceof Error ? error.message : "Gagal submit hasil");
+      setSubmitting(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
+          <p className="text-lg font-medium">Mempersiapkan soal...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background p-4">
+        <div className="text-center space-y-4 max-w-sm">
+          <div className="text-red-600">
+            <svg
+              className="w-12 h-12 mx-auto"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4v2m0-12a9 9 0 110 18 9 9 0 010-18z"
+              />
+            </svg>
+          </div>
+          <p className="text-lg font-medium">Error</p>
+          <p className="text-muted-foreground">{error}</p>
+          <button
+            onClick={() => router.back()}
+            className="rounded-lg bg-primary px-4 py-2 text-white font-medium hover:bg-primary/90"
+          >
+            Kembali
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!attempt || !attempt.questions || attempt.questions.length === 0) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <p className="text-lg font-medium">Soal tidak ditemukan</p>
+          <button
+            onClick={() => router.back()}
+            className="rounded-lg bg-primary px-4 py-2 text-white font-medium hover:bg-primary/90"
+          >
+            Kembali
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const question = attempt.questions[currentIndex];
+  const currentAnswer = answers[question?.id];
+
+  return (
+    <div className="flex min-h-screen flex-col bg-background">
+      {/* HEADER */}
+      <TryoutHeader
+        current={currentIndex}
+        total={attempt.questions.length}
+        remainingTime={remainingTime}
+      />
+
+      {/* CONTENT */}
+      <div className="flex flex-1 gap-6 overflow-hidden p-6">
+        {/* SIDEBAR - Question Palette */}
+        <div className="w-32 shrink-0 hidden lg:block">
+          <div className="sticky top-20 rounded-lg border bg-card p-4 max-h-[calc(100vh-120px)] overflow-y-auto">
+            <h2 className="mb-4 text-sm font-semibold">Navigasi</h2>
+
+            <QuestionNavigation
+              total={attempt.questions.length}
+              current={currentIndex}
+              onSelect={setCurrentIndex}
+              questions={attempt.questions}
+              answers={answers}
+              mode="tryout"
+            />
+          </div>
+        </div>
+
+        {/* MAIN QUESTION */}
+        <div className="flex-1 min-w-0">
+          <div className="rounded-lg border bg-card p-8 max-w-2xl">
+            <QuestionViewer
+              question={question}
+              answer={currentAnswer}
+              onSelectAnswer={handleSelectAnswer}
+            />
+          </div>
+        </div>
+
+        {/* Mobile Palette Button */}
+        <button
+          onClick={() => setPaletteVisible(true)}
+          className="lg:hidden fixed bottom-24 right-6 z-40 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white shadow-lg hover:bg-primary/90"
+        >
+          Navigasi
+        </button>
+      </div>
+
+      {/* FOOTER */}
+      <TryoutFooter
+        currentIndex={currentIndex}
+        questions={attempt.questions}
+        currentAnswer={currentAnswer}
+        currentQuestion={question}
+        toggleRagu={handleToggleRagu}
+        setCurrentIndex={setCurrentIndex}
+        onSubmitPress={() => setSubmitVisible(true)}
+      />
+
+      {/* PALETTE MODAL (Mobile) */}
+      <QuestionPaletteModal
+        visible={paletteVisible}
+        onClose={() => setPaletteVisible(false)}
+        questions={attempt.questions}
+        answers={answers}
+        currentIndex={currentIndex}
+        onSelect={(index) => {
+          setCurrentIndex(index);
+          setPaletteVisible(false);
+        }}
+        mode="tryout"
+      />
+
+      {/* SUBMIT CONFIRMATION MODAL */}
+      {submitVisible && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-lg bg-card p-6 space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold">Kumpulkan Jawaban?</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Apakah Anda yakin ingin mengumpulkan jawaban? Anda tidak dapat
+                mengubahnya lagi setelah submit.
+              </p>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                {
+                  label: "Total",
+                  value: attempt.questions.length,
+                  color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+                },
+                {
+                  label: "Dijawab",
+                  value: Object.values(answers).filter((a) => a?.answer).length,
+                  color: "bg-green-500/10 text-green-600 dark:text-green-400",
+                },
+                {
+                  label: "Kosong",
+                  value:
+                    attempt.questions.length -
+                    Object.values(answers).filter((a) => a?.answer).length,
+                  color: "bg-gray-500/10 text-gray-600 dark:text-gray-400",
+                },
+                {
+                  label: "Ragu",
+                  value: Object.values(answers).filter((a) => a?.ragu).length,
+                  color:
+                    "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
+                },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className={`rounded-lg ${stat.color} p-3 text-center`}
+                >
+                  <p className="text-xs font-medium opacity-75">{stat.label}</p>
+                  <p className="text-xl font-bold">{stat.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setSubmitVisible(false)}
+                disabled={submitting}
+                className="flex-1 rounded-lg border bg-background py-2 font-medium hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                Lanjut
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="flex-1 rounded-lg bg-primary py-2 font-medium text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {submitting ? "Mengirim..." : "Kumpulkan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

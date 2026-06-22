@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { APP_ROUTES } from "@/lib/app-routes";
 
 import {
   Dialog,
@@ -155,7 +154,7 @@ export default function StartTryoutDialog({ open, onClose, tryoutId }: Props) {
 
           <button
             onClick={() => {
-              router.push(APP_ROUTES.TRYOUT.DETAIL(tryoutId));
+              router.push(`/tryout/${tryoutId}`);
             }}
             className="
               cursor-pointer

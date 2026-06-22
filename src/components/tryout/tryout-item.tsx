@@ -59,7 +59,7 @@ export default function TryoutItem({ data }: Props) {
     <>
       <div
         className="
-          rounded-2xl
+          rounded-[8px]
           border
           bg-card
           p-5
@@ -105,7 +105,8 @@ export default function TryoutItem({ data }: Props) {
 
                 <span>•</span>
 
-                <span>{data.max_attempt}x percobaan</span>
+                <span>{data.max_attempt}x max attempt</span>
+                <span>{data.remaining_attempt}x sisa attempt</span>
               </div>
             </div>
 
@@ -178,20 +179,22 @@ export default function TryoutItem({ data }: Props) {
             {/* BUTTON */}
             {data.status === "ongoing" && (
               <button
+                disabled={data.remaining_attempt === 0}
                 onClick={() => setOpenConfirm(true)}
-                className="
-                  cursor-pointer
-                  rounded-lg
-                  bg-primary
-                  px-4 py-2
-                  text-xs
-                  font-medium
-                  text-white
-                  transition-all
-                  hover:bg-primary/90
-                "
+                className={`
+      rounded-lg
+      px-4 py-2
+      text-xs
+      font-medium
+      transition-all
+      ${
+        data.remaining_attempt === 0
+          ? "bg-muted text-muted-foreground cursor-not-allowed opacity-60"
+          : "bg-primary text-white cursor-pointer hover:bg-primary/90"
+      }
+    `}
               >
-                Mulai
+                {data.remaining_attempt === 0 ? "Selesai" : "Mulai"}
               </button>
             )}
           </div>
