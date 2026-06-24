@@ -117,6 +117,7 @@ export interface TryoutReportResponse {
 
 /* ========== SESSION PERSISTENCE ========== */
 export interface SessionState {
+  tryoutId: number;
   attemptToken: string;
   answers: AnswersMap;
   currentIndex: number;

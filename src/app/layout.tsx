@@ -1,9 +1,9 @@
-// src/app/layout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
 
 import { Inter } from "next/font/google";
 import Providers from "../components/shared/providers";
+import TryoutSessionGuard from "@/components/tryout/tryout-session-guard";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -24,7 +24,10 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning className="light">
       <body className={`${inter.variable} font-sans antialiased`}>
-        <Providers>{children}</Providers>
+        <Providers>
+          <TryoutSessionGuard />
+          {children}
+        </Providers>
       </body>
     </html>
   );

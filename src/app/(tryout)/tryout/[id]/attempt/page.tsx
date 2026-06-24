@@ -130,6 +130,7 @@ export default function TryoutAttemptPage() {
 
         // Create and persist initial session
         const initialSession: SessionState = {
+          tryoutId,
           attemptToken: newAttemptToken,
           answers: {},
           currentIndex: 0,
@@ -155,6 +156,7 @@ export default function TryoutAttemptPage() {
     if (!attemptToken) return;
 
     const session: SessionState = {
+      tryoutId,
       attemptToken,
       answers,
       currentIndex,

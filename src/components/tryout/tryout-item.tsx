@@ -2,9 +2,7 @@
 "use client";
 
 import { useState } from "react";
-
-import StartTryoutDialog from "./start-tryout-dialog";
-
+import { useRouter } from "next/navigation";
 import { Tryout } from "@/types/tryout";
 
 interface Props {
@@ -12,8 +10,7 @@ interface Props {
 }
 
 export default function TryoutItem({ data }: Props) {
-  const [openConfirm, setOpenConfirm] = useState(false);
-
+  const router = useRouter();
   function getStatusConfig(status: string) {
     switch (status) {
       case "ongoing":
@@ -180,7 +177,7 @@ export default function TryoutItem({ data }: Props) {
             {data.status === "ongoing" && (
               <button
                 disabled={data.remaining_attempt === 0}
-                onClick={() => setOpenConfirm(true)}
+                onClick={() => router.push(`/tryout/${data.id}`)}
                 className={`
       rounded-lg
       px-4 py-2
@@ -200,13 +197,6 @@ export default function TryoutItem({ data }: Props) {
           </div>
         </div>
       </div>
-
-      {/* START DIALOG */}
-      <StartTryoutDialog
-        open={openConfirm}
-        onClose={() => setOpenConfirm(false)}
-        tryoutId={data.id}
-      />
     </>
   );
 }
