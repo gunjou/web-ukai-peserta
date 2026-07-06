@@ -25,6 +25,7 @@ export default function TryoutAttemptPage() {
   const params = useParams();
   const tryoutId = Number(params.id);
   const hasPushedHistory = useRef(false);
+  const initialized = useRef(false);
 
   // State
   const [loading, setLoading] = useState(true);
@@ -68,7 +69,13 @@ export default function TryoutAttemptPage() {
 
   // Initialize tryout
   useEffect(() => {
-    initTryout();
+    if (initialized.current) return;
+
+    initialized.current = true;
+
+    console.log("INIT TRYOUT");
+
+    void initTryout();
   }, [tryoutId]);
 
   async function initTryout() {
@@ -100,7 +107,7 @@ export default function TryoutAttemptPage() {
             // Just fetch questions to verify
             const attemptRes = await getTryoutAttempt(
               session.attemptToken,
-              token
+              token,
             );
             setAttempt(attemptRes.data);
           }
@@ -278,7 +285,7 @@ export default function TryoutAttemptPage() {
 
       // ke halaman hasil
       router.replace(
-        `/tryout/${tryoutId}/result?token=${attemptToken}&score=${result.data.score}`
+        `/tryout/${tryoutId}/result?token=${attemptToken}&score=${result.data.score}`,
       );
     } catch (error) {
       console.error(error);
@@ -332,7 +339,7 @@ export default function TryoutAttemptPage() {
 
       // Navigate to result
       router.replace(
-        `/tryout/${tryoutId}/result?token=${attemptToken}&score=${result.data.score}`
+        `/tryout/${tryoutId}/result?token=${attemptToken}&score=${result.data.score}`,
       );
     } catch (error) {
       console.error("Submit failed:", error);
