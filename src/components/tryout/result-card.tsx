@@ -72,28 +72,28 @@ export default function ResultCard({ data }: Props) {
             <p className="text-lg font-bold text-green-600 dark:text-green-400">
               {data.benar}
             </p>
-            <p className="text-xs text-muted-foreground">Benar</p>
+            <p className="text-[10px] text-muted-foreground">Benar</p>
           </div>
 
           <div className="rounded-lg bg-red-500/10 p-3 text-center">
             <p className="text-lg font-bold text-red-600 dark:text-red-400">
               {data.salah}
             </p>
-            <p className="text-xs text-muted-foreground">Salah</p>
+            <p className="text-[10px] text-muted-foreground">Salah</p>
           </div>
 
           <div className="rounded-lg bg-gray-500/10 p-3 text-center">
             <p className="text-lg font-bold text-gray-600 dark:text-gray-400">
               {data.kosong}
             </p>
-            <p className="text-xs text-muted-foreground">Kosong</p>
+            <p className="text-[10px] text-muted-foreground">Kosong</p>
           </div>
 
           <div className="rounded-lg bg-yellow-500/10 p-3 text-center">
             <p className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
-              {data.ragu}
+              {data.ragu_ragu}
             </p>
-            <p className="text-xs text-muted-foreground">Ragu</p>
+            <p className="text-[10px] text-muted-foreground">Ragu</p>
           </div>
         </div>
 

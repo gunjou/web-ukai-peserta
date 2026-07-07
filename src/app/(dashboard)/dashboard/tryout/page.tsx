@@ -8,10 +8,13 @@ import TryoutSkeleton from "@/components/tryout/tryout-skeleton";
 import { getTryouts } from "@/services/tryout.service";
 import { Tryout } from "@/types/tryout";
 
+const ITEMS_PER_PAGE = 9;
+
 export default function TryoutPage() {
   const [tryouts, setTryouts] = useState<Tryout[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetchTryouts();
@@ -35,6 +38,45 @@ export default function TryoutPage() {
     const keyword = search.toLowerCase().trim();
     return tryouts.filter((item) => item.title.toLowerCase().includes(keyword));
   }, [search, tryouts]);
+
+  // reset ke halaman 1 setiap kali pencarian berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredData.length / ITEMS_PER_PAGE)
+  );
+
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredData.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredData, currentPage]);
+
+  function goToPage(page: number) {
+    const clamped = Math.min(Math.max(page, 1), totalPages);
+    setCurrentPage(clamped);
+  }
+
+  // bikin daftar nomor halaman (dengan ellipsis kalau banyak)
+  function getPageNumbers(): (number | "...")[] {
+    const pages: (number | "...")[] = [];
+    const delta = 1;
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (
+        i === 1 ||
+        i === totalPages ||
+        (i >= currentPage - delta && i <= currentPage + delta)
+      ) {
+        pages.push(i);
+      } else if (pages[pages.length - 1] !== "...") {
+        pages.push("...");
+      }
+    }
+    return pages;
+  }
 
   return (
     <div className="h-[calc(90vh-64px)] flex flex-col overflow-hidden">
@@ -86,16 +128,80 @@ export default function TryoutPage() {
             />
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {filteredData.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-[16px] border bg-card p-4 shadow-sm hover:shadow-md transition h-full"
-              >
-                <TryoutItem data={item} />
+          <>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {paginatedData.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-[16px] border bg-card p-4 shadow-sm hover:shadow-md transition h-full"
+                >
+                  <TryoutItem data={item} />
+                </div>
+              ))}
+            </div>
+
+            {/* PAGINATION */}
+            {totalPages > 1 && (
+              <div className="mt-6 flex flex-col items-center justify-between gap-3 sm:flex-row">
+                <p className="text-sm text-muted-foreground">
+                  Halaman {currentPage} dari {totalPages} ({filteredData.length}{" "}
+                  hasil)
+                </p>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="
+                      rounded-lg border px-3 py-2 text-sm
+                      disabled:opacity-40 disabled:cursor-not-allowed
+                      hover:bg-muted transition
+                    "
+                  >
+                    Sebelumnya
+                  </button>
+
+                  {getPageNumbers().map((page, idx) =>
+                    page === "..." ? (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        className="px-2 text-sm text-muted-foreground select-none"
+                      >
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={page}
+                        onClick={() => goToPage(page)}
+                        className={`
+                          h-9 w-9 rounded-lg text-sm border transition
+                          ${
+                            page === currentPage
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "hover:bg-muted"
+                          }
+                        `}
+                      >
+                        {page}
+                      </button>
+                    )
+                  )}
+
+                  <button
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="
+                      rounded-lg border px-3 py-2 text-sm
+                      disabled:opacity-40 disabled:cursor-not-allowed
+                      hover:bg-muted transition
+                    "
+                  >
+                    Selanjutnya
+                  </button>
+                </div>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>

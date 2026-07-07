@@ -85,7 +85,7 @@ export interface TryoutResultItem {
   benar: number;
   salah: number;
   kosong: number;
-  ragu: number;
+  ragu_ragu: number;
   attempt_ke: number;
   tanggal: string;
 }
