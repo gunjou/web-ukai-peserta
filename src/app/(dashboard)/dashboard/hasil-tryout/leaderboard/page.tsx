@@ -12,6 +12,8 @@ import {
   Medal,
   Clock,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import EmptyState from "@/components/shared/empty-state";
@@ -23,11 +25,27 @@ import {
 } from "@/services/tryout.service";
 import { Tryout, LeaderboardData, LeaderboardItem } from "@/types/tryout";
 
-function formatDuration(minutes: number) {
-  if (minutes < 60) return `${minutes} menit`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m > 0 ? `${h} jam ${m} menit` : `${h} jam`;
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
+function formatDuration(seconds: number | string | null | undefined) {
+  const totalSeconds = Number(seconds);
+
+  if (!totalSeconds || totalSeconds <= 0) {
+    return "0 menit";
+  }
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+  if (hours === 0) {
+    return `${minutes} menit`;
+  }
+
+  if (minutes === 0) {
+    return `${hours} jam`;
+  }
+
+  return `${hours} jam ${minutes} menit`;
 }
 
 function rankBadgeClass(rank: number) {
@@ -48,6 +66,10 @@ export default function LeaderboardClassPage() {
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
 
   const [search, setSearch] = useState("");
+
+  // PAGINATION STATE
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     fetchTryouts();
@@ -81,11 +103,20 @@ export default function LeaderboardClassPage() {
   async function fetchLeaderboard(tryoutId: number) {
     try {
       setLoadingLeaderboard(true);
+
       const token = localStorage.getItem("access_token");
       if (!token) return;
 
       const res = await getTryoutLeaderboardClass(tryoutId, token);
-      setData(res.data || null);
+
+      setData(
+        res.data
+          ? {
+              ...res.data,
+              leaderboard: res.data.leaderboard ?? [],
+            }
+          : null
+      );
     } catch (err) {
       console.error(err);
       setData(null);
@@ -96,14 +127,37 @@ export default function LeaderboardClassPage() {
 
   const filteredLeaderboard: LeaderboardItem[] = useMemo(() => {
     if (!data) return [];
+
+    const leaderboard = data.leaderboard ?? [];
     const keyword = search.toLowerCase().trim();
-    if (!keyword) return data.leaderboard;
-    return data.leaderboard.filter(
+
+    if (!keyword) return leaderboard;
+
+    return leaderboard.filter(
       (item) =>
         item.name.toLowerCase().includes(keyword) ||
         item.class.toLowerCase().includes(keyword)
     );
   }, [search, data]);
+
+  // Reset ke halaman 1 setiap kali search / data / tryout berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedId, data]);
+
+  const totalItems = filteredLeaderboard.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+  // Guard kalau currentPage jadi out-of-range (misal setelah pageSize berubah)
+  const safePage = Math.min(currentPage, totalPages);
+
+  const paginatedLeaderboard = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return filteredLeaderboard.slice(start, start + pageSize);
+  }, [filteredLeaderboard, safePage, pageSize]);
+
+  const startItemIndex = totalItems === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const endItemIndex = Math.min(safePage * pageSize, totalItems);
 
   const selectedTryout = tryouts.find((t) => t.id === selectedId) || null;
 
@@ -226,12 +280,22 @@ export default function LeaderboardClassPage() {
               <SummaryCard
                 icon={<Target className="h-5 w-5" />}
                 label="Rata-rata Skor"
-                value={data.summary.average_score.toString()}
+                value={Number(data.summary.average_score).toLocaleString(
+                  "id-ID",
+                  {
+                    maximumFractionDigits: 2,
+                  }
+                )}
               />
               <SummaryCard
                 icon={<TrendingUp className="h-5 w-5" />}
                 label="Skor Tertinggi"
-                value={data.summary.highest_score.toString()}
+                value={Number(data.summary.highest_score).toLocaleString(
+                  "id-ID",
+                  {
+                    maximumFractionDigits: 2,
+                  }
+                )}
               />
               <SummaryCard
                 icon={<Medal className="h-5 w-5" />}
@@ -283,7 +347,7 @@ export default function LeaderboardClassPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredLeaderboard.map((item) => (
+                  {paginatedLeaderboard.map((item) => (
                     <tr
                       key={item.user_id}
                       className="border-b last:border-0 hover:bg-muted/30 transition"
@@ -299,12 +363,16 @@ export default function LeaderboardClassPage() {
                           {item.rank}
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-medium">{item.name}</td>
+                      <td className="px-4 py-3 font-medium capitalize">
+                        {item.name}
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {item.class}
                       </td>
                       <td className="px-4 py-3 text-right font-semibold">
-                        {item.score}
+                        {Number(item.score).toLocaleString("id-ID", {
+                          maximumFractionDigits: 2,
+                        })}
                       </td>
                       <td className="px-4 py-3 text-right text-muted-foreground">
                         {item.attempt}
@@ -325,12 +393,131 @@ export default function LeaderboardClassPage() {
                   Tidak ada peserta yang cocok dengan pencarian.
                 </div>
               )}
+
+              {/* PAGINATION CONTROLS */}
+              {filteredLeaderboard.length > 0 && (
+                <div className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>
+                      Menampilkan {startItemIndex}-{endItemIndex} dari{" "}
+                      {totalItems} peserta
+                    </span>
+
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="
+                        rounded-lg border bg-background
+                        px-2 py-1 text-xs
+                        focus:border-primary
+                        focus:outline-none
+                        focus:ring-2
+                        focus:ring-primary/20
+                      "
+                    >
+                      {PAGE_SIZE_OPTIONS.map((size) => (
+                        <option key={size} value={size}>
+                          {size} / halaman
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={safePage === 1}
+                      className="
+                        inline-flex h-8 w-8 items-center justify-center
+                        rounded-lg border hover:bg-muted transition
+                        disabled:opacity-40 disabled:pointer-events-none
+                      "
+                      aria-label="Halaman sebelumnya"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+
+                    {getPageNumbers(safePage, totalPages).map((p, idx) =>
+                      p === "..." ? (
+                        <span
+                          key={`ellipsis-${idx}`}
+                          className="px-2 text-xs text-muted-foreground"
+                        >
+                          …
+                        </span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => setCurrentPage(p as number)}
+                          className={`
+                            inline-flex h-8 w-8 items-center justify-center
+                            rounded-lg border text-xs font-medium transition
+                            ${
+                              safePage === p
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "hover:bg-muted"
+                            }
+                          `}
+                        >
+                          {p}
+                        </button>
+                      )
+                    )}
+
+                    <button
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={safePage === totalPages}
+                      className="
+                        inline-flex h-8 w-8 items-center justify-center
+                        rounded-lg border hover:bg-muted transition
+                        disabled:opacity-40 disabled:pointer-events-none
+                      "
+                      aria-label="Halaman berikutnya"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
       </div>
     </div>
   );
+}
+
+// Menghasilkan daftar nomor halaman dengan ellipsis untuk halaman yang banyak
+function getPageNumbers(current: number, total: number): (number | "...")[] {
+  const delta = 1;
+  const range: (number | "...")[] = [];
+  const rangeStart = Math.max(2, current - delta);
+  const rangeEnd = Math.min(total - 1, current + delta);
+
+  range.push(1);
+
+  if (rangeStart > 2) {
+    range.push("...");
+  }
+
+  for (let i = rangeStart; i <= rangeEnd; i++) {
+    range.push(i);
+  }
+
+  if (rangeEnd < total - 1) {
+    range.push("...");
+  }
+
+  if (total > 1) {
+    range.push(total);
+  }
+
+  return range;
 }
 
 function SummaryCard({

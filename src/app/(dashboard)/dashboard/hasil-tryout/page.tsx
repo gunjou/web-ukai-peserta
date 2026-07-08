@@ -113,19 +113,6 @@ export default function HasilTryoutPage() {
                 <Trophy className="h-4 w-4" />
                 Leaderboard
               </button>
-
-              <button
-                onClick={() => router.push("/dashboard/hasil-tryout/statistik")}
-                className="
-            inline-flex items-center gap-2
-            rounded-xl border px-4 py-2
-            text-sm font-medium
-            hover:bg-muted transition
-          "
-              >
-                <BarChart3 className="h-4 w-4" />
-                Statistik
-              </button>
             </div>
 
             {/* Search */}
