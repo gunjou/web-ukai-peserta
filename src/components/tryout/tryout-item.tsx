@@ -13,7 +13,7 @@ export default function TryoutItem({ data }: Props) {
   const router = useRouter();
   const now = new Date();
   function normalizeDate(date: string) {
-    return new Date(date.endsWith("Z") ? date.slice(0, -1) : date);
+    return new Date(date.replace("Z", "") + "+07:00");
   }
 
   const start = normalizeDate(data.access_start_at);
@@ -52,7 +52,16 @@ export default function TryoutItem({ data }: Props) {
   }
 
   function formatDate(date: string) {
-    return new Intl.DateTimeFormat("id-ID", {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    const timezoneName = new Intl.DateTimeFormat("id-ID", {
+      timeZone: timezone,
+      timeZoneName: "short",
+    })
+      .formatToParts(new Date())
+      .find((part) => part.type === "timeZoneName")?.value;
+
+    return `${new Intl.DateTimeFormat("id-ID", {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -60,7 +69,8 @@ export default function TryoutItem({ data }: Props) {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
-    }).format(normalizeDate(date));
+      timeZone: timezone,
+    }).format(normalizeDate(date))} ${timezoneName ?? timezone}`;
   }
 
   return (
@@ -138,7 +148,7 @@ export default function TryoutItem({ data }: Props) {
                 </span>
 
                 <span className="text-muted-foreground">
-                  : {formatDate(data.access_start_at)} WIB
+                  : {formatDate(data.access_start_at)}
                 </span>
               </div>
 
@@ -154,7 +164,7 @@ export default function TryoutItem({ data }: Props) {
                 </span>
 
                 <span className="text-muted-foreground">
-                  : {formatDate(data.access_end_at)} WIB
+                  : {formatDate(data.access_end_at)}
                 </span>
               </div>
             </div>
