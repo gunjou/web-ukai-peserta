@@ -1,3 +1,4 @@
+//app/(dashboard)/dashboard/hasil-tryout/page.tsx
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -7,10 +8,13 @@ import TryoutSkeleton from "@/components/tryout/tryout-skeleton";
 
 import { getTryoutResults } from "@/services/tryout.service";
 import { TryoutResultItem } from "@/types/tryout";
+import { useRouter } from "next/navigation";
+import { BarChart3, Trophy } from "lucide-react";
 
 const ITEMS_PER_PAGE = 9;
 
 export default function HasilTryoutPage() {
+  const router = useRouter();
   const [results, setResults] = useState<TryoutResultItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -82,7 +86,7 @@ export default function HasilTryoutPage() {
     <div className="h-[calc(90vh-64px)] flex flex-col overflow-hidden">
       {/* HEADER */}
       <div className="shrink-0 border-b bg-background/80 backdrop-blur">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pb-4">
           {/* LEFT: TITLE */}
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Hasil Tryout</h1>
@@ -91,29 +95,57 @@ export default function HasilTryoutPage() {
             </p>
           </div>
 
-          {/* RIGHT: SEARCH (desktop) */}
-          <div className="w-full md:w-80">
-            <input
-              type="text"
-              placeholder="Cari tryout..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="
-          w-full
-          rounded-xl
-          border
-          bg-background
-          px-4
-          py-3
-          text-sm
-          shadow-sm
-          placeholder:text-muted-foreground
-          focus:border-primary
-          focus:outline-none
-          focus:ring-2
-          focus:ring-primary/20
-        "
-            />
+          {/* RIGHT */}
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            {/* Tombol */}
+            <div className="flex gap-2">
+              <button
+                onClick={() =>
+                  router.push("/dashboard/hasil-tryout/leaderboard")
+                }
+                className="
+            inline-flex items-center gap-2
+            rounded-xl border px-4 py-2
+            text-sm font-medium
+            hover:bg-muted transition
+          "
+              >
+                <Trophy className="h-4 w-4" />
+                Leaderboard
+              </button>
+
+              <button
+                onClick={() => router.push("/dashboard/hasil-tryout/statistik")}
+                className="
+            inline-flex items-center gap-2
+            rounded-xl border px-4 py-2
+            text-sm font-medium
+            hover:bg-muted transition
+          "
+              >
+                <BarChart3 className="h-4 w-4" />
+                Statistik
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="w-full md:w-80">
+              <input
+                type="text"
+                placeholder="Cari tryout..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="
+            w-full rounded-xl border bg-background
+            px-4 py-3 text-sm shadow-sm
+            placeholder:text-muted-foreground
+            focus:border-primary
+            focus:outline-none
+            focus:ring-2
+            focus:ring-primary/20
+          "
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -135,7 +167,7 @@ export default function HasilTryoutPage() {
               {paginatedData.map((item) => (
                 <div
                   key={item.attempt_token}
-                  className="rounded-xl border bg-card p-4 shadow-sm hover:shadow-md transition h-full"
+                  className="rounded-[16px] border bg-card p-4 shadow-sm hover:shadow-md transition h-full"
                 >
                   <ResultCard data={item} />
                 </div>

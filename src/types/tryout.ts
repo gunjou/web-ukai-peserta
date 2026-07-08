@@ -123,3 +123,40 @@ export interface SessionState {
   currentIndex: number;
   endTime: number;
 }
+
+/* ========== LEADERBOARD ========== */
+
+export interface LeaderboardSummary {
+  total_participants: number;
+  total_attempt: number;
+  average_score: number;
+  highest_score: number;
+  my_score: number;
+  my_rank: number;
+}
+
+export interface LeaderboardItem {
+  rank: number;
+  user_id: number;
+  name: string;
+  class: string;
+  score: number;
+  attempt: number;
+  duration: number;
+}
+
+export interface LeaderboardData {
+  summary: LeaderboardSummary;
+  leaderboard: LeaderboardItem[];
+}
+
+export interface LeaderboardResponse {
+  status: string;
+  message: string;
+  data: LeaderboardData;
+  meta: {
+    response_time_us: number;
+    timestamp: string;
+    request_id: string;
+  };
+}

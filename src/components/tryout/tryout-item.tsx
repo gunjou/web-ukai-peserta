@@ -11,6 +11,18 @@ interface Props {
 
 export default function TryoutItem({ data }: Props) {
   const router = useRouter();
+  const now = new Date();
+  function normalizeDate(date: string) {
+    return new Date(date.endsWith("Z") ? date.slice(0, -1) : date);
+  }
+
+  const start = normalizeDate(data.access_start_at);
+  const end = normalizeDate(data.access_end_at);
+
+  const currentStatus =
+    now < start ? "upcoming" : now > end ? "ended" : "ongoing";
+  const status = getStatusConfig(currentStatus);
+
   function getStatusConfig(status: string) {
     switch (status) {
       case "ongoing":
@@ -47,10 +59,9 @@ export default function TryoutItem({ data }: Props) {
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    }).format(new Date(date));
+      hour12: false,
+    }).format(normalizeDate(date));
   }
-
-  const status = getStatusConfig(data.status);
 
   return (
     <>
@@ -174,7 +185,7 @@ export default function TryoutItem({ data }: Props) {
             </span>
 
             {/* BUTTON */}
-            {data.status === "ongoing" && (
+            {currentStatus === "ongoing" && (
               <button
                 disabled={data.remaining_attempt === 0}
                 onClick={() => router.push(`/tryout/${data.id}`)}

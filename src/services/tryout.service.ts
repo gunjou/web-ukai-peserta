@@ -10,6 +10,7 @@ import {
   TryoutReportResponse,
   AnswersMap,
   SaveAnswersRequest,
+  LeaderboardResponse,
 } from "@/types/tryout";
 
 /* ========== TRYOUT LIST ========== */
@@ -98,6 +99,21 @@ export async function getTryoutResults(token: string) {
 export async function getTryoutReport(attemptToken: string, token: string) {
   return apiClient.get<TryoutReportResponse>(
     API_ENDPOINTS.TRYOUT.REPORT(attemptToken),
+    {
+      token,
+    }
+  );
+}
+
+/* ========== LEADERBOARD ========== */
+
+/* GET TRYOUT LEADERBOARD (PER CLASS) */
+export async function getTryoutLeaderboardClass(
+  tryoutId: number | string,
+  token: string
+) {
+  return apiClient.get<LeaderboardResponse>(
+    API_ENDPOINTS.TRYOUT.LEADERBOARD_CLASS(tryoutId),
     {
       token,
     }

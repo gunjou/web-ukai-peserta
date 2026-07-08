@@ -33,5 +33,7 @@ export const API_ENDPOINTS = {
       `/api/v2/tryout/attempt/${attemptToken}/resume`,
     REPORT: (attemptToken: string) => `/api/v2/tryout/report/${attemptToken}`,
     RESULTS: "/api/v2/tryout/report",
+    LEADERBOARD_CLASS: (tryoutId: number | string) =>
+      `/api/v2/tryout/${tryoutId}/leaderboard/class`,
   },
 };
