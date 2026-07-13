@@ -45,6 +45,7 @@ export default function QuestionCard({ question }: Props) {
           md:prose-base
           max-w-none
           dark:prose-invert
+          whitespace-pre-line
 
           [&_img]:max-w-full
           [&_img]:h-auto

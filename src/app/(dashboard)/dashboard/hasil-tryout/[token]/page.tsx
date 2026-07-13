@@ -189,7 +189,7 @@ export default function TryoutResultDetailPage() {
               Soal
             </h3>
             <div
-              className="prose prose-sm max-w-none dark:prose-invert"
+              className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-line"
               dangerouslySetInnerHTML={{ __html: question.pertanyaan }}
             />
           </div>
