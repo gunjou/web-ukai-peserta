@@ -73,7 +73,7 @@ export default function TryoutResultDetailPage() {
   const isLast = currentIndex === questions.length - 1;
 
   const answersMap: AnswersMap = Object.fromEntries(
-    questions.map((q) => [q.id, { answer: q.user_answer, ragu: q.is_ragu }])
+    questions.map((q) => [q.id, { answer: q.user_answer, ragu: q.is_ragu }]),
   );
 
   const statuses: { [key: number]: "benar" | "salah" | "kosong" } =
@@ -149,8 +149,8 @@ export default function TryoutResultDetailPage() {
                   question.status === "benar"
                     ? "bg-green-500/10 text-green-600"
                     : question.status === "salah"
-                    ? "bg-red-500/10 text-red-600"
-                    : "bg-gray-500/10 text-gray-500"
+                      ? "bg-red-500/10 text-red-600"
+                      : "bg-gray-500/10 text-gray-500"
                 }
               `}
             >
@@ -167,8 +167,8 @@ export default function TryoutResultDetailPage() {
                     question.status === "benar"
                       ? "text-green-600"
                       : question.status === "salah"
-                      ? "text-red-600"
-                      : "text-gray-500"
+                        ? "text-red-600"
+                        : "text-gray-500"
                   }
                 >
                   {question.status.toUpperCase()}
@@ -214,8 +214,8 @@ export default function TryoutResultDetailPage() {
                         isCorrect
                           ? "border-green-500 bg-green-500/10"
                           : isWrong
-                          ? "border-red-500 bg-red-500/10"
-                          : "border-border bg-background"
+                            ? "border-red-500 bg-red-500/10"
+                            : "border-border bg-background"
                       }
                     `}
                   >
@@ -227,8 +227,8 @@ export default function TryoutResultDetailPage() {
                           isCorrect
                             ? "bg-green-600 text-white"
                             : isWrong
-                            ? "bg-red-600 text-white"
-                            : "bg-muted text-muted-foreground"
+                              ? "bg-red-600 text-white"
+                              : "bg-muted text-muted-foreground"
                         }
                       `}
                     >
@@ -273,7 +273,7 @@ export default function TryoutResultDetailPage() {
               </button>
 
               {expandedPembahasan && (
-                <div className="mt-4 px-1 prose prose-sm max-w-none dark:prose-invert">
+                <div className="mt-4 px-1 prose prose-sm max-w-none dark:prose-invert whitespace-pre-line">
                   <div
                     dangerouslySetInnerHTML={{ __html: question.pembahasan }}
                   />
@@ -327,7 +327,7 @@ export default function TryoutResultDetailPage() {
             <button
               onClick={() =>
                 setCurrentIndex(
-                  Math.min(questions.length - 1, currentIndex + 1)
+                  Math.min(questions.length - 1, currentIndex + 1),
                 )
               }
               disabled={isLast}

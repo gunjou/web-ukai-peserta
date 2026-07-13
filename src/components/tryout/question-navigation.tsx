@@ -122,9 +122,18 @@ export default function QuestionNavigation({
               `}
             >
               {mode === "pembahasan" ? (
-                getReviewIcon(index)
+                <>
+                  {/* Nomor kecil di pojok kiri atas saat mode pembahasan */}
+                  <span className="absolute top-0.5 left-1 text-[9px] font-bold opacity-80">
+                    {index + 1}
+                  </span>
+
+                  {/* Ikon Status Utama di Tengah */}
+                  {getReviewIcon(index)}
+                </>
               ) : (
                 <>
+                  {/* Tampilan normal saat sedang tryout */}
                   <span>{index + 1}</span>
 
                   {answer?.ragu && (
