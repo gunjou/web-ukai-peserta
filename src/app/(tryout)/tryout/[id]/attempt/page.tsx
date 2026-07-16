@@ -14,6 +14,7 @@ import {
   startTryout,
   saveAttemptAnswers,
   submitAttempt,
+  checkOngoingTryout,
 } from "@/services/tryout.service";
 
 import { TryoutAttempt, AnswersMap, SessionState } from "@/types/tryout";
@@ -40,6 +41,15 @@ export default function TryoutAttemptPage() {
   const [submitVisible, setSubmitVisible] = useState(false);
   const [leaveWarningVisible, setLeaveWarningVisible] = useState(false);
   const [allowLeave, setAllowLeave] = useState(false);
+
+  // Always-fresh ref so timers/closures never read stale `answers`
+  const answersRef = useRef<AnswersMap>({});
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+
+  // Ref to avoid double-submits from timer + manual click racing
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (loading || allowLeave) return;
@@ -88,68 +98,70 @@ export default function TryoutAttemptPage() {
         return;
       }
 
-      // Check if there's an existing valid session
-      const sessionStr = localStorage.getItem(STORAGE_KEY);
-      let hasValidSession = false;
-      let attemptToken = localStorage.getItem("attempt_token");
+      const ongoingRes = await checkOngoingTryout(token);
+      const candidates = (ongoingRes?.data?.ongoing ?? []).filter(
+        (item) => item.id_tryout === tryoutId
+      );
 
-      if (sessionStr && attemptToken) {
-        try {
-          const session: SessionState = JSON.parse(sessionStr);
-          // Check if session is still valid (endTime hasn't passed)
-          if (session.endTime && session.endTime > Date.now()) {
-            // Valid session exists - restore it
-            setAnswers(session.answers || {});
-            setCurrentIndex(session.currentIndex || 0);
-            setEndTime(session.endTime);
-            hasValidSession = true;
+      // Kalau ada banyak ongoing untuk tryout yang sama (data lama/duplikat),
+      // ambil yang paling baru berdasarkan start_time, jangan asumsikan index [0].
+      const ongoingForThis = candidates.sort(
+        (a, b) =>
+          new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
+      )[0];
 
-            // Just fetch questions to verify
-            const attemptRes = await getTryoutAttempt(
-              session.attemptToken,
-              token,
-            );
-            setAttempt(attemptRes.data);
-          }
-        } catch (e) {
-          console.error("Failed to restore session:", e);
-          // Session invalid, clear it and create new
-          localStorage.removeItem(STORAGE_KEY);
-          localStorage.removeItem("attempt_token");
-        }
-      }
+      let attemptToken: string;
+      let newEndTime: number;
 
-      // If no valid session, start new attempt
-      if (!hasValidSession) {
-        console.log("Creating new attempt...");
-        const startRes = await startTryout(tryoutId, token);
-        const newAttemptToken = startRes.data.attempt_token;
-        const durationSeconds = startRes.data.duration * 60;
-        const newEndTime = Date.now() + durationSeconds * 1000;
+      if (ongoingForThis) {
+        attemptToken = ongoingForThis.attempt_token;
+        localStorage.setItem("attempt_token", attemptToken);
 
-        // Save attempt token
-        localStorage.setItem("attempt_token", newAttemptToken);
-
-        // Fetch questions
-        const attemptRes = await getTryoutAttempt(newAttemptToken, token);
+        // is_ongoing tidak memberi end_time untuk attempt yang masih aktif,
+        // jadi endTime dihitung dari start_time + duration hasil fetch soal.
+        const attemptRes = await getTryoutAttempt(attemptToken, token);
         setAttempt(attemptRes.data);
+
+        const startMs = new Date(ongoingForThis.start_time).getTime();
+        newEndTime = startMs + attemptRes.data.duration * 60 * 1000;
         setEndTime(newEndTime);
 
-        // Create and persist initial session
-        const initialSession: SessionState = {
-          tryoutId,
-          attemptToken: newAttemptToken,
-          answers: {},
-          currentIndex: 0,
-          endTime: newEndTime,
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(initialSession));
+        // Restore jawaban HANYA kalau formatnya cocok dengan AnswersMap
+        // (key = questionId numerik, value = {answer, ragu}).
+        // Kalau formatnya "soal_N" / "jawaban" (format lama), skip restore
+        // dan biarkan mulai kosong -- daripada salah mapping.
+        const rawAnswers = ongoingForThis.jawaban_user ?? {};
+        const looksLikeCurrentFormat = Object.values(rawAnswers).every(
+          (v: any) => v && typeof v === "object" && "answer" in v
+        );
+        if (looksLikeCurrentFormat) {
+          setAnswers(rawAnswers as AnswersMap);
+          answersRef.current = rawAnswers as AnswersMap;
+        }
+      } else {
+        console.log("Creating new attempt...");
+        const startRes = await startTryout(tryoutId, token);
+        attemptToken = startRes.data.attempt_token;
+        const durationSeconds = startRes.data.duration * 60;
+        newEndTime = Date.now() + durationSeconds * 1000;
+        localStorage.setItem("attempt_token", attemptToken);
+
+        const attemptRes = await getTryoutAttempt(attemptToken, token);
+        setAttempt(attemptRes.data);
+        setEndTime(newEndTime);
       }
+
+      const session: SessionState = {
+        tryoutId,
+        attemptToken,
+        answers: ongoingForThis ? answersRef.current : {},
+        currentIndex: ongoingForThis ? currentIndex : 0,
+        endTime: newEndTime,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     } catch (error) {
       console.error("Init error:", error);
-      const errorMsg =
-        error instanceof Error ? error.message : "Gagal memulai tryout";
-      setError(errorMsg);
+      setError(error instanceof Error ? error.message : "Gagal memulai tryout");
     } finally {
       setLoading(false);
     }
@@ -165,7 +177,7 @@ export default function TryoutAttemptPage() {
     const session: SessionState = {
       tryoutId,
       attemptToken,
-      answers,
+      answers: answersRef.current,
       currentIndex,
       endTime,
     };
@@ -182,14 +194,20 @@ export default function TryoutAttemptPage() {
       setRemainingTime(remaining);
 
       // Auto-submit when time runs out
-      if (remaining === 0 && !submitting && attempt && !loading) {
+      if (remaining === 0 && !submittingRef.current && attempt && !loading) {
         console.log("Time's up, auto-submitting...");
+        // Close any open modals so nothing lingers over the redirect
+        setSubmitVisible(false);
+        setLeaveWarningVisible(false);
         handleSubmit();
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [endTime, submitting, attempt, loading]);
+    // NOTE: intentionally NOT depending on `answers` -- we read the latest
+    // value through answersRef instead, so this interval doesn't need to
+    // be torn down/recreated every keystroke.
+  }, [endTime, attempt, loading]);
 
   // Persist answers changes
   useEffect(() => {
@@ -198,16 +216,18 @@ export default function TryoutAttemptPage() {
 
   // Auto-save to server every 10 seconds
   useEffect(() => {
-    if (!endTime || Object.keys(answers).length === 0) return;
+    if (!endTime) return;
 
     const autoSaveInterval = setInterval(async () => {
+      if (Object.keys(answersRef.current).length === 0) return;
+
       const token = localStorage.getItem("access_token");
       const attemptToken = localStorage.getItem("attempt_token");
 
       if (!token || !attemptToken) return;
 
       try {
-        await saveAttemptAnswers(attemptToken, answers, token);
+        await saveAttemptAnswers(attemptToken, answersRef.current, token);
         console.log("Auto-saved");
       } catch (error) {
         console.error("Auto-save failed:", error);
@@ -215,7 +235,7 @@ export default function TryoutAttemptPage() {
     }, 10000);
 
     return () => clearInterval(autoSaveInterval);
-  }, [answers, endTime]);
+  }, [endTime]);
 
   useEffect(() => {
     const handleVisibilityChange = async () => {
@@ -229,7 +249,7 @@ export default function TryoutAttemptPage() {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [answers]);
+  }, []);
 
   function handleSelectAnswer(option: string) {
     const questionId = attempt?.questions[currentIndex]?.id;
@@ -254,63 +274,13 @@ export default function TryoutAttemptPage() {
     }));
   }
 
-  async function handleLeaveTryout() {
-    if (!attempt) return;
+  // Shared implementation used by both the manual "Kumpulkan" button
+  // (handleSubmit) and the "Kumpulkan & Keluar" leave-warning button
+  // (handleLeaveTryout), and by the auto-submit-on-timeout path.
+  async function submitAndExit() {
+    if (submittingRef.current || !attempt) return;
 
-    try {
-      setSubmitting(true);
-
-      const token = localStorage.getItem("access_token");
-      const attemptToken = localStorage.getItem("attempt_token");
-
-      if (!token || !attemptToken) {
-        setError("Token tidak ditemukan");
-        return;
-      }
-
-      // simpan jawaban terakhir
-      await saveAttemptAnswers(attemptToken, answers, token);
-
-      // submit tryout
-      const result = await submitAttempt(attemptToken, token);
-
-      // 1. simpan hasil
-      localStorage.setItem("TRYOUT_RESULT", JSON.stringify(result.data));
-
-      // 2. redirect ke result page
-      router.replace(`/tryout/${tryoutId}/result?token=${attemptToken}`);
-      // hapus session
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem("attempt_token");
-
-      // ke halaman hasil
-      router.replace(
-        `/tryout/${tryoutId}/result?token=${attemptToken}&score=${result.data.score}`,
-      );
-    } catch (error) {
-      console.error(error);
-      setSubmitting(false);
-    }
-  }
-
-  async function saveBeforeExit() {
-    try {
-      const token = localStorage.getItem("access_token");
-      const attemptToken = localStorage.getItem("attempt_token");
-
-      if (!token || !attemptToken) return;
-
-      await saveAttemptAnswers(attemptToken, answers, token);
-
-      persistSession();
-    } catch (error) {
-      console.error("Failed saving before exit:", error);
-    }
-  }
-
-  async function handleSubmit() {
-    if (submitting || !attempt) return;
-
+    submittingRef.current = true;
     setSubmitting(true);
 
     try {
@@ -322,30 +292,56 @@ export default function TryoutAttemptPage() {
         return;
       }
 
-      // Save final answers
-      await saveAttemptAnswers(attemptToken, answers, token);
+      // Save final answers (always the latest, via ref)
+      await saveAttemptAnswers(attemptToken, answersRef.current, token);
 
       // Submit attempt
       const result = await submitAttempt(attemptToken, token);
 
-      // 1. simpan hasil
+      // Simpan hasil
       localStorage.setItem("TRYOUT_RESULT", JSON.stringify(result.data));
 
-      // 2. redirect ke result page
-      router.replace(`/tryout/${tryoutId}/result?token=${attemptToken}`);
-      // Clear session
+      // Hapus session
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem("attempt_token");
 
-      // Navigate to result
+      // Allow navigation away without triggering the leave-warning guard
+      setAllowLeave(true);
+
+      // Redirect ke result page
       router.replace(
-        `/tryout/${tryoutId}/result?token=${attemptToken}&score=${result.data.score}`,
+        `/tryout/${tryoutId}/result?token=${attemptToken}&score=${result.data.score}`
       );
     } catch (error) {
       console.error("Submit failed:", error);
       setError(error instanceof Error ? error.message : "Gagal submit hasil");
+      submittingRef.current = false;
       setSubmitting(false);
     }
+  }
+
+  async function handleLeaveTryout() {
+    await submitAndExit();
+  }
+
+  async function saveBeforeExit() {
+    if (submittingRef.current || !attempt) return;
+    try {
+      const token = localStorage.getItem("access_token");
+      const attemptToken = localStorage.getItem("attempt_token");
+
+      if (!token || !attemptToken) return;
+
+      await saveAttemptAnswers(attemptToken, answersRef.current, token);
+
+      persistSession();
+    } catch (error) {
+      console.error("Failed saving before exit:", error);
+    }
+  }
+
+  async function handleSubmit() {
+    await submitAndExit();
   }
 
   if (loading) {
@@ -608,6 +604,7 @@ export default function TryoutAttemptPage() {
             <div className="mt-6 flex gap-3">
               <button
                 onClick={() => setLeaveWarningVisible(false)}
+                disabled={submitting}
                 className="
             flex-1
             rounded-xl
@@ -615,6 +612,7 @@ export default function TryoutAttemptPage() {
             py-2.5
             font-medium
             hover:bg-muted
+            disabled:opacity-50
           "
               >
                 Tetap Mengerjakan
@@ -622,6 +620,7 @@ export default function TryoutAttemptPage() {
 
               <button
                 onClick={handleLeaveTryout}
+                disabled={submitting}
                 className="
             flex-1
             rounded-xl
@@ -630,9 +629,10 @@ export default function TryoutAttemptPage() {
             font-medium
             text-white
             hover:bg-red-600
+            disabled:opacity-50
           "
               >
-                Kumpulkan & Keluar
+                {submitting ? "Mengirim..." : "Kumpulkan & Keluar"}
               </button>
             </div>
           </div>

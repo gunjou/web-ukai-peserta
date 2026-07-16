@@ -35,5 +35,6 @@ export const API_ENDPOINTS = {
     RESULTS: "/api/v2/tryout/report",
     LEADERBOARD_CLASS: (tryoutId: number | string) =>
       `/api/v2/tryout/${tryoutId}/leaderboard/class`,
+    IS_ONGOING: "/api/v2/tryout/is_ongoing",
   },
 };

@@ -58,7 +58,7 @@ export default function TryoutResultDetailPage() {
         <div className="text-center space-y-4">
           <p className="text-lg font-medium">Pembahasan tidak ditemukan</p>
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push("/dashboard/hasil-tryout")}
             className="rounded-lg bg-primary px-4 py-2 text-white font-medium hover:bg-primary/90"
           >
             Kembali
@@ -73,7 +73,7 @@ export default function TryoutResultDetailPage() {
   const isLast = currentIndex === questions.length - 1;
 
   const answersMap: AnswersMap = Object.fromEntries(
-    questions.map((q) => [q.id, { answer: q.user_answer, ragu: q.is_ragu }]),
+    questions.map((q) => [q.id, { answer: q.user_answer, ragu: q.is_ragu }])
   );
 
   const statuses: { [key: number]: "benar" | "salah" | "kosong" } =
@@ -86,16 +86,33 @@ export default function TryoutResultDetailPage() {
   return (
     // Ubah menjadi h-screen overflow-hidden agar seluruh halaman tidak scroll
     <div className="flex h-screen flex-col bg-background overflow-hidden">
-      {/* HEADER — tidak ikut scroll karena berada di luar area scroll */}
-      <TryoutHeader
-        current={currentIndex}
-        total={questions.length}
-        remainingTime={0}
-        totalDuration={0}
-        answeredCount={benarCount + salahCount}
-        raguCount={questions.filter((q) => q.is_ragu).length}
-        onOpenPalette={() => setPaletteVisible(true)}
-      />
+      {/* BACK BUTTON + HEADER — sejajar dalam satu baris, tidak ikut scroll */}
+      <div className="shrink-0 flex items-center gap-3 px-2">
+        <button
+          onClick={() => router.push("/dashboard/hasil-tryout")}
+          className="
+            shrink-0 flex items-center gap-2
+            rounded-lg border px-3 py-1.5
+            text-sm font-medium
+            hover:bg-muted transition-colors
+          "
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span className="hidden sm:inline">Kembali</span>
+        </button>
+
+        <div className="flex-1 min-w-0">
+          <TryoutHeader
+            current={currentIndex}
+            total={questions.length}
+            remainingTime={0}
+            totalDuration={0}
+            answeredCount={benarCount + salahCount}
+            raguCount={questions.filter((q) => q.is_ragu).length}
+            onOpenPalette={() => setPaletteVisible(true)}
+          />
+        </div>
+      </div>
 
       {/*
         BODY — flex-1 + overflow-hidden agar tepat mengisi sisa tinggi layar
@@ -149,8 +166,8 @@ export default function TryoutResultDetailPage() {
                   question.status === "benar"
                     ? "bg-green-500/10 text-green-600"
                     : question.status === "salah"
-                      ? "bg-red-500/10 text-red-600"
-                      : "bg-gray-500/10 text-gray-500"
+                    ? "bg-red-500/10 text-red-600"
+                    : "bg-gray-500/10 text-gray-500"
                 }
               `}
             >
@@ -167,8 +184,8 @@ export default function TryoutResultDetailPage() {
                     question.status === "benar"
                       ? "text-green-600"
                       : question.status === "salah"
-                        ? "text-red-600"
-                        : "text-gray-500"
+                      ? "text-red-600"
+                      : "text-gray-500"
                   }
                 >
                   {question.status.toUpperCase()}
@@ -214,8 +231,8 @@ export default function TryoutResultDetailPage() {
                         isCorrect
                           ? "border-green-500 bg-green-500/10"
                           : isWrong
-                            ? "border-red-500 bg-red-500/10"
-                            : "border-border bg-background"
+                          ? "border-red-500 bg-red-500/10"
+                          : "border-border bg-background"
                       }
                     `}
                   >
@@ -227,8 +244,8 @@ export default function TryoutResultDetailPage() {
                           isCorrect
                             ? "bg-green-600 text-white"
                             : isWrong
-                              ? "bg-red-600 text-white"
-                              : "bg-muted text-muted-foreground"
+                            ? "bg-red-600 text-white"
+                            : "bg-muted text-muted-foreground"
                         }
                       `}
                     >
@@ -327,7 +344,7 @@ export default function TryoutResultDetailPage() {
             <button
               onClick={() =>
                 setCurrentIndex(
-                  Math.min(questions.length - 1, currentIndex + 1),
+                  Math.min(questions.length - 1, currentIndex + 1)
                 )
               }
               disabled={isLast}

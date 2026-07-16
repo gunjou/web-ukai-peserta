@@ -160,3 +160,42 @@ export interface LeaderboardResponse {
     request_id: string;
   };
 }
+export interface OngoingAttempt {
+  id_hasiltryout: number;
+  id_tryout: number;
+  attempt_token: string;
+  start_time: string;
+  end_time: string | null;
+  jawaban_user: Record<string, any>;
+  status_pengerjaan: string;
+}
+
+export interface OngoingAttemptItem {
+  title: string;
+  id_hasiltryout: number;
+  id_tryout: number;
+  attempt_token: string;
+  start_time: string;
+  end_time: string | null; // null while genuinely ongoing
+  jawaban_user:
+    | Record<string, { answer: string; ragu: boolean }>
+    | Record<
+        string,
+        { jawaban: string | null; ragu: number; timestamp: string | null }
+      >;
+  status_pengerjaan: "ongoing";
+}
+
+export interface IsOngoingResponse {
+  status: string;
+  message: string;
+  data: {
+    ongoing: OngoingAttemptItem[];
+    expired: OngoingAttemptItem[];
+  };
+  meta: {
+    response_time_us: number;
+    timestamp: string;
+    request_id: string;
+  };
+}

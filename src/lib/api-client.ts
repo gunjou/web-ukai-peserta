@@ -29,12 +29,14 @@ async function request<T>(
   if (!response.ok) {
     const error = await response.json().catch(() => null);
 
-    // HANDLE SESSION INVALID
-    if (error?.message.includes("session invalid")) {
+    // HANDLE SESSION INVALID — pakai optional chaining penuh, jangan sampai
+    // .includes() dipanggil di atas undefined
+    if (error?.message?.includes("session invalid")) {
       handleSessionInvalid();
     }
 
-    throw new Error(error?.message || "Terjadi kesalahan");
+    // Sertakan status code biar gampang di-debug dari console
+    throw new Error(error?.message || `Terjadi kesalahan (${response.status})`);
   }
 
   return response.json();

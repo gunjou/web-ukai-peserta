@@ -11,6 +11,7 @@ import {
   AnswersMap,
   SaveAnswersRequest,
   LeaderboardResponse,
+  IsOngoingResponse,
 } from "@/types/tryout";
 
 /* ========== TRYOUT LIST ========== */
@@ -118,4 +119,13 @@ export async function getTryoutLeaderboardClass(
       token,
     }
   );
+}
+
+/* ========== ONGOING / EXPIRED CHECK ========== */
+
+/* CHECK ONGOING & EXPIRED ATTEMPTS */
+export async function checkOngoingTryout(token: string) {
+  return apiClient.get<IsOngoingResponse>(API_ENDPOINTS.TRYOUT.IS_ONGOING, {
+    token,
+  });
 }
