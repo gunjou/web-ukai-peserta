@@ -1,7 +1,6 @@
 // components/tryout/tryout-item.tsx
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Tryout } from "@/types/tryout";
 
@@ -12,18 +11,14 @@ interface Props {
 export default function TryoutItem({ data }: Props) {
   const router = useRouter();
   const now = new Date();
-  function normalizeDate(date: string) {
-    return new Date(date.replace("Z", "") + "+07:00");
-  }
+
+  const normalizeDate = (date: string) =>
+    new Date(date.replace("Z", "") + "+07:00");
 
   const start = normalizeDate(data.access_start_at);
   const end = normalizeDate(data.access_end_at);
 
-  const currentStatus =
-    now < start ? "upcoming" : now > end ? "ended" : "ongoing";
-  const status = getStatusConfig(currentStatus);
-
-  function getStatusConfig(status: string) {
+  const getStatusConfig = (status: string) => {
     switch (status) {
       case "ongoing":
         return {
@@ -49,11 +44,14 @@ export default function TryoutItem({ data }: Props) {
           className: "bg-muted text-muted-foreground border",
         };
     }
-  }
+  };
 
-  function formatDate(date: string) {
+  const currentStatus =
+    now < start ? "upcoming" : now > end ? "ended" : "ongoing";
+  const status = getStatusConfig(currentStatus);
+
+  const formatDate = (date: string) => {
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
     const timezoneName = new Intl.DateTimeFormat("id-ID", {
       timeZone: timezone,
       timeZoneName: "short",
@@ -71,118 +69,63 @@ export default function TryoutItem({ data }: Props) {
       hour12: false,
       timeZone: timezone,
     }).format(normalizeDate(date))} ${timezoneName ?? timezone}`;
-  }
+  };
 
   return (
-    <>
-      <div
-        className="
-          rounded-[8px]
-          border
-          bg-card
-          p-5
-          transition-all
-          hover:shadow-sm
-        "
-      >
-        <div
-          className="
-            flex
-            items-start
-            justify-between
-            gap-4
-          "
-        >
-          {/* LEFT */}
-          <div className="min-w-0 flex-1 space-y-3">
-            {/* TITLE */}
-            <div>
-              <h2
-                className="
-                  truncate
-                  text-base
-                  font-semibold
-                "
-              >
-                {data.title}
-              </h2>
+    <div className="rounded-[8px] border bg-card p-5 transition-all hover:shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        {/* LEFT */}
+        <div className="min-w-0 flex-1 space-y-3">
+          {/* TITLE */}
+          <div>
+            <h2 className="text-base font-semibold leading-6 break-words">
+              {data.title}
+            </h2>
 
-              {/* META */}
-              <div
-                className="
-                  mt-1
-                  flex flex-wrap items-center gap-2
-                  text-xs text-muted-foreground
-                "
-              >
-                <span>{data.total_soal} soal</span>
+            {/* META */}
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>{data.total_soal} soal</span>
 
-                <span>•</span>
+              <span>•</span>
 
-                <span>{data.duration} menit</span>
+              <span>{data.duration} menit</span>
 
-                <span>•</span>
+              <span>•</span>
 
-                <span>{data.max_attempt}x max attempt</span>
-                <span>{data.remaining_attempt}x sisa attempt</span>
-              </div>
-            </div>
-
-            {/* DATE */}
-            <div
-              className="
-                flex flex-col gap-1
-                text-xs
-                font-semibold
-              "
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className="
-                    min-w-[55px]
-                    font-medium
-                    text-foreground
-                  "
-                >
-                  Mulai
-                </span>
-
-                <span className="text-muted-foreground">
-                  : {formatDate(data.access_start_at)}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span
-                  className="
-                    min-w-[55px]
-                    font-medium
-                    text-foreground
-                  "
-                >
-                  Berakhir
-                </span>
-
-                <span className="text-muted-foreground">
-                  : {formatDate(data.access_end_at)}
-                </span>
-              </div>
+              <span>{data.max_attempt}x max attempt</span>
+              <span>{data.remaining_attempt}x sisa attempt</span>
             </div>
           </div>
 
-          {/* RIGHT */}
-          <div
-            className="
-              flex
-              shrink-0
-              flex-col
-              items-end
-              gap-3
-            "
-          >
-            {/* STATUS */}
-            <span
-              className={`
+          {/* DATE */}
+          <div className="flex flex-col gap-1 text-xs font-semibold">
+            <div className="flex items-center gap-2">
+              <span className="min-w-[55px] font-medium text-foreground">
+                Mulai
+              </span>
+
+              <span className="text-muted-foreground">
+                : {formatDate(data.access_start_at)}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="min-w-[55px] font-medium text-foreground">
+                Berakhir
+              </span>
+
+              <span className="text-muted-foreground">
+                : {formatDate(data.access_end_at)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT */}
+        <div className="flex shrink-0 flex-col items-end gap-3">
+          {/* STATUS */}
+          <span
+            className={`
                 whitespace-nowrap
                 rounded-full
                 px-2.5 py-1
@@ -190,34 +133,26 @@ export default function TryoutItem({ data }: Props) {
                 font-semibold
                 ${status.className}
               `}
-            >
-              {status.label}
-            </span>
+          >
+            {status.label}
+          </span>
 
-            {/* BUTTON */}
-            {currentStatus === "ongoing" && (
-              <button
-                disabled={data.remaining_attempt === 0}
-                onClick={() => router.push(`/tryout/${data.id}`)}
-                className={`
-      rounded-lg
-      px-4 py-2
-      text-xs
-      font-medium
-      transition-all
-      ${
-        data.remaining_attempt === 0
-          ? "bg-muted text-muted-foreground cursor-not-allowed opacity-60"
-          : "bg-primary text-white cursor-pointer hover:bg-primary/90"
-      }
-    `}
-              >
-                {data.remaining_attempt === 0 ? "Selesai" : "Mulai"}
-              </button>
-            )}
-          </div>
+          {/* BUTTON */}
+          {currentStatus === "ongoing" && (
+            <button
+              disabled={data.remaining_attempt === 0}
+              onClick={() => router.push(`/tryout/${data.id}`)}
+              className={`rounded-lg px-4 py-2 text-xs font-medium transition-all ${
+                data.remaining_attempt === 0
+                  ? "bg-muted text-muted-foreground cursor-not-allowed opacity-60"
+                  : "bg-primary text-white cursor-pointer hover:bg-primary/90"
+              }`}
+            >
+              {data.remaining_attempt === 0 ? "Selesai" : "Mulai"}
+            </button>
+          )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
