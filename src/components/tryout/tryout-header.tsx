@@ -5,6 +5,7 @@ import { Clock, CheckCircle2, Flag, Grid2X2, Calculator } from "lucide-react";
 import ScientificCalculator from "@/components/tryout/scientific-calculator";
 
 interface Props {
+  title?: string;
   current: number;
   total: number;
   remainingTime: number;
@@ -12,9 +13,11 @@ interface Props {
   answeredCount: number;
   raguCount: number;
   onOpenPalette?: () => void;
+  showTimer?: boolean;
 }
 
 export default function TryoutHeader({
+  title,
   current,
   total,
   remainingTime,
@@ -22,6 +25,7 @@ export default function TryoutHeader({
   answeredCount,
   raguCount,
   onOpenPalette,
+  showTimer = true,
 }: Props) {
   const [calcOpen, setCalcOpen] = useState(false);
 
@@ -50,7 +54,7 @@ export default function TryoutHeader({
             {/* LEFT SECTION: Judul & Info Soal */}
             <div className="min-w-0 flex items-center gap-4">
               <h1 className="hidden md:block truncate text-base font-bold shrink-0">
-                Syndrome Ukai Tryout
+                {title || "Syndrome Ukai Tryout"}
               </h1>
               {/* Pembatas vertikal kecil (hanya muncul di desktop bersama judul) */}
               <div className="hidden md:block h-4 w-px bg-border shrink-0" />
@@ -75,22 +79,25 @@ export default function TryoutHeader({
             {/* RIGHT SECTION: Timer & Buttons */}
             <div className="flex items-center gap-2 shrink-0">
               {/* Timer (Lebih slim dengan py-1.5 dan text-sm/base) */}
-              <div
-                className={`
-                  flex items-center gap-1.5 rounded-xl px-3 py-1.5
-                  font-mono text-sm lg:text-base font-bold shadow-sm shrink-0
-                  ${
-                    isCritical
-                      ? "border border-red-500 bg-red-500/10 text-red-600"
-                      : isTimeRunningOut
-                      ? "border border-yellow-500 bg-yellow-500/10 text-yellow-600"
-                      : "border bg-card"
-                  }
-                `}
-              >
-                <Clock className="h-4 w-4" />
-                {formatTime(remainingTime)}
-              </div>
+              {/* Timer (Lebih slim dengan py-1.5 dan text-sm/base) */}
+              {showTimer && (
+                <div
+                  className={`
+      flex items-center gap-1.5 rounded-xl px-3 py-1.5
+      font-mono text-sm lg:text-base font-bold shadow-sm shrink-0
+      ${
+        isCritical
+          ? "border border-red-500 bg-red-500/10 text-red-600"
+          : isTimeRunningOut
+          ? "border border-yellow-500 bg-yellow-500/10 text-yellow-600"
+          : "border bg-card"
+      }
+    `}
+                >
+                  <Clock className="h-4 w-4" />
+                  {formatTime(remainingTime)}
+                </div>
+              )}
 
               {/* Calculator Button */}
               <button

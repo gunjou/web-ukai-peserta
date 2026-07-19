@@ -16,6 +16,7 @@ export default function TryoutResultDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState<TryoutReportQuestion[]>([]);
+  const [tryoutTitle, setTryoutTitle] = useState<string>("");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [expandedPembahasan, setExpandedPembahasan] = useState(false);
   const [paletteVisible, setPaletteVisible] = useState(false);
@@ -30,6 +31,7 @@ export default function TryoutResultDetailPage() {
       if (!token) return;
       const result = await getTryoutReport(attemptToken, token);
       setQuestions(result.data);
+      setTryoutTitle(result.meta?.additional?.title ?? "");
     } catch (error) {
       console.error(error);
     } finally {
@@ -98,14 +100,15 @@ export default function TryoutResultDetailPage() {
           "
         >
           <ChevronLeft className="h-4 w-4" />
-          <span className="hidden sm:inline">Kembali</span>
         </button>
 
         <div className="flex-1 min-w-0">
           <TryoutHeader
+            title={tryoutTitle}
             current={currentIndex}
             total={questions.length}
             remainingTime={0}
+            showTimer={false}
             totalDuration={0}
             answeredCount={benarCount + salahCount}
             raguCount={questions.filter((q) => q.is_ragu).length}

@@ -113,6 +113,14 @@ export interface TryoutReportResponse {
   status: string;
   message: string;
   data: TryoutReportQuestion[];
+  meta: {
+    response_time_us: number;
+    timestamp: string;
+    request_id: string;
+    additional: {
+      title: string;
+    };
+  };
 }
 
 /* ========== SESSION PERSISTENCE ========== */

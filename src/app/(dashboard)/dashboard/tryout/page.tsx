@@ -10,10 +10,13 @@ import { Tryout } from "@/types/tryout";
 
 const ITEMS_PER_PAGE = 9;
 
+type StatusFilter = "all" | "done" | "not_done";
+
 export default function TryoutPage() {
   const [tryouts, setTryouts] = useState<Tryout[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -36,13 +39,26 @@ export default function TryoutPage() {
 
   const filteredData = useMemo(() => {
     const keyword = search.toLowerCase().trim();
-    return tryouts.filter((item) => item.title.toLowerCase().includes(keyword));
-  }, [search, tryouts]);
 
-  // reset ke halaman 1 setiap kali pencarian berubah
+    return tryouts.filter((item) => {
+      const matchSearch = item.title.toLowerCase().includes(keyword);
+
+      // sudah dikerjakan jika sisa attempt < max attempt
+      const isDone = item.remaining_attempt < item.max_attempt;
+
+      const matchStatus =
+        statusFilter === "all" ||
+        (statusFilter === "done" && isDone) ||
+        (statusFilter === "not_done" && !isDone);
+
+      return matchSearch && matchStatus;
+    });
+  }, [search, statusFilter, tryouts]);
+
+  // reset ke halaman 1 setiap kali pencarian/filter berubah
   useEffect(() => {
     setCurrentPage(1);
-  }, [search]);
+  }, [search, statusFilter]);
 
   const totalPages = Math.max(
     1,
@@ -77,6 +93,12 @@ export default function TryoutPage() {
     }
     return pages;
   }
+
+  const statusOptions: { value: StatusFilter; label: string }[] = [
+    { value: "all", label: "Semua" },
+    { value: "done", label: "Sudah Dikerjakan" },
+    { value: "not_done", label: "Belum Dikerjakan" },
+  ];
 
   return (
     <div className="h-[calc(90vh-64px)] flex flex-col overflow-hidden">
@@ -115,18 +137,42 @@ export default function TryoutPage() {
             />
           </div>
         </div>
+
+        {/* STATUS FILTER TABS */}
+        <div className="flex items-center gap-2 pb-4">
+          {statusOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setStatusFilter(opt.value)}
+              className={`
+                rounded-full border px-4 py-1.5 text-sm transition
+                ${
+                  statusFilter === opt.value
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "hover:bg-muted"
+                }
+              `}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-5">
         {loading ? (
           <TryoutSkeleton />
         ) : filteredData.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
-            <EmptyState
-              title="Belum Ada Tryout"
-              description="Tryout belum tersedia untuk akun Anda."
-            />
-          </div>
+          <EmptyState
+            title="Belum Ada Tryout"
+            description={
+              statusFilter === "done"
+                ? "Belum ada tryout yang sudah kamu kerjakan."
+                : statusFilter === "not_done"
+                ? "Semua tryout sudah kamu kerjakan."
+                : "Tryout belum tersedia untuk akun Anda."
+            }
+          />
         ) : (
           <>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
