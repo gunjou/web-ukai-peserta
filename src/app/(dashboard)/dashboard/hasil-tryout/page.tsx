@@ -40,7 +40,12 @@ export default function HasilTryoutPage() {
 
   const filteredData = useMemo(() => {
     const keyword = search.toLowerCase().trim();
-    return results.filter((item) => item.title.toLowerCase().includes(keyword));
+
+    if (!Array.isArray(results)) return [];
+
+    return results.filter((item) =>
+      (item?.title ?? "").toLowerCase().includes(keyword),
+    );
   }, [search, results]);
 
   // reset ke halaman 1 setiap kali pencarian berubah
@@ -50,7 +55,7 @@ export default function HasilTryoutPage() {
 
   const totalPages = Math.max(
     1,
-    Math.ceil(filteredData.length / ITEMS_PER_PAGE)
+    Math.ceil(filteredData.length / ITEMS_PER_PAGE),
   );
 
   const paginatedData = useMemo(() => {
@@ -205,7 +210,7 @@ export default function HasilTryoutPage() {
                       >
                         {page}
                       </button>
-                    )
+                    ),
                   )}
 
                   <button

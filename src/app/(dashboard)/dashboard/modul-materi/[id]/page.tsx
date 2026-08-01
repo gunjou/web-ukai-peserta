@@ -44,7 +44,12 @@ export default function ModulMateriDetailPage() {
 
   const filteredData = useMemo(() => {
     const keyword = search.toLowerCase().trim();
-    return materi.filter((item) => item.title.toLowerCase().includes(keyword));
+
+    if (!Array.isArray(materi)) return [];
+
+    return materi.filter((item) =>
+      (item?.title ?? "").toLowerCase().includes(keyword),
+    );
   }, [search, materi]);
 
   // reset ke halaman 1 setiap kali pencarian atau jumlah item per halaman berubah
@@ -253,7 +258,7 @@ export default function ModulMateriDetailPage() {
                       >
                         {page}
                       </button>
-                    )
+                    ),
                   )}
 
                   <button

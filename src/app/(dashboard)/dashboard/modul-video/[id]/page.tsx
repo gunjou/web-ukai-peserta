@@ -44,7 +44,12 @@ export default function ModulVideoDetailPage() {
 
   const filteredData = useMemo(() => {
     const keyword = search.toLowerCase().trim();
-    return videos.filter((item) => item.title.toLowerCase().includes(keyword));
+
+    if (!Array.isArray(videos)) return [];
+
+    return videos.filter((item) =>
+      (item?.title ?? "").toLowerCase().includes(keyword),
+    );
   }, [search, videos]);
 
   // reset ke halaman 1 setiap kali pencarian atau jumlah item per halaman berubah
@@ -253,7 +258,7 @@ export default function ModulVideoDetailPage() {
                       >
                         {page}
                       </button>
-                    )
+                    ),
                   )}
 
                   <button

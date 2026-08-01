@@ -40,11 +40,15 @@ export default function TryoutPage() {
   const filteredData = useMemo(() => {
     const keyword = search.toLowerCase().trim();
 
-    return tryouts.filter((item) => {
-      const matchSearch = item.title.toLowerCase().includes(keyword);
+    if (!Array.isArray(tryouts)) return [];
 
-      // sudah dikerjakan jika sisa attempt < max attempt
-      const isDone = item.remaining_attempt < item.max_attempt;
+    return tryouts.filter((item) => {
+      const matchSearch = (item?.title ?? "").toLowerCase().includes(keyword);
+
+      // Sudah dikerjakan jika sisa attempt < max attempt
+      const remainingAttempt = item?.remaining_attempt ?? 0;
+      const maxAttempt = item?.max_attempt ?? 0;
+      const isDone = remainingAttempt < maxAttempt;
 
       const matchStatus =
         statusFilter === "all" ||
@@ -62,7 +66,7 @@ export default function TryoutPage() {
 
   const totalPages = Math.max(
     1,
-    Math.ceil(filteredData.length / ITEMS_PER_PAGE)
+    Math.ceil(filteredData.length / ITEMS_PER_PAGE),
   );
 
   const paginatedData = useMemo(() => {
@@ -169,8 +173,8 @@ export default function TryoutPage() {
               statusFilter === "done"
                 ? "Belum ada tryout yang sudah kamu kerjakan."
                 : statusFilter === "not_done"
-                ? "Semua tryout sudah kamu kerjakan."
-                : "Tryout belum tersedia untuk akun Anda."
+                  ? "Semua tryout sudah kamu kerjakan."
+                  : "Tryout belum tersedia untuk akun Anda."
             }
           />
         ) : (
@@ -230,7 +234,7 @@ export default function TryoutPage() {
                       >
                         {page}
                       </button>
-                    )
+                    ),
                   )}
 
                   <button
