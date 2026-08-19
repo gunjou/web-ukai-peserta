@@ -7,6 +7,7 @@ import {
   ClipboardList,
   BarChart,
   Sparkles,
+  Presentation,
 } from "lucide-react";
 
 import { useUserStore } from "@/stores/user.store";
@@ -41,6 +42,11 @@ export default function MobileBottomNav() {
         ]
       : []),
 
+    {
+      label: "Kelas",
+      icon: Presentation,
+      href: "/dashboard/jadwal-kelas",
+    },
     {
       label: "Tryout",
       icon: ClipboardList,

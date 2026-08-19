@@ -10,6 +10,7 @@ import {
   FileText,
   Sparkles,
   Video,
+  Presentation,
 } from "lucide-react";
 
 import Image from "next/image";
@@ -35,6 +36,11 @@ export default function DashboardSidebar({
       name: "Video",
       href: "/dashboard/modul-video",
       icon: PlayCircle,
+    },
+    {
+      name: "Kelas",
+      href: "/dashboard/jadwal-kelas",
+      icon: Presentation,
     },
     {
       name: "Tryout",
@@ -83,8 +89,8 @@ export default function DashboardSidebar({
               active
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : isPrivate
-                ? "text-primary/80 hover:bg-primary/10 hover:text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "text-primary/80 hover:bg-primary/10 hover:text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }
           `}
         >

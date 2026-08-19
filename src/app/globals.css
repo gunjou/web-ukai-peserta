@@ -39,6 +39,7 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-accent-blue: var(--accent-blue);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -62,6 +63,7 @@
   --card-foreground: #241815;
   --popover: #ffffff;
   --popover-foreground: #241815;
+  --accent-blue: #2563eb;
 
   /* PRIMARY SYSTEM (Gold becomes the visual identity)  */
   --primary: var(--brand-gold);
@@ -129,6 +131,7 @@
   --card-foreground: #f4eee7;
   --popover: #1d1613;
   --popover-foreground: #f4eee7;
+  --accent-blue: #3b82f6;
 
   /* PRIMARY SYSTEM */
   --primary: var(--brand-gold);

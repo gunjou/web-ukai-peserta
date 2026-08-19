@@ -1,0 +1,239 @@
+"use client";
+
+import { CalendarDays, Clock, MapPin, User, Video, X } from "lucide-react";
+
+import { useEffect, useState } from "react";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+import type { Schedule } from "@/types/schedule";
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  schedule: Schedule | null;
+}
+
+function formatDate(date: string) {
+  return new Intl.DateTimeFormat("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(date));
+}
+
+/* =========================================================
+ * CHECK ATTENDANCE TIME
+ * ========================================================= */
+
+function isAttendanceTime(schedule: Schedule | null) {
+  if (!schedule) return false;
+
+  const now = new Date();
+
+  /*
+   * Karena schedule.date berasal dari format:
+   *
+   * YYYY-MM-DD
+   *
+   * dan start_time / end_time:
+   *
+   * HH:mm
+   *
+   * kita gabungkan menjadi waktu lokal browser.
+   *
+   * Browser peserta diasumsikan menggunakan WIB.
+   */
+
+  const start = new Date(`${schedule.date}T${schedule.start_time}:00`);
+  const end = new Date(`${schedule.date}T${schedule.end_time}:00`);
+
+  return now >= start && now <= end;
+}
+
+export default function ScheduleDetailDialog({
+  open,
+  onClose,
+  schedule,
+}: Props) {
+  const [attendanceAvailable, setAttendanceAvailable] = useState(false);
+
+  /* =========================================================
+   * UPDATE ATTENDANCE STATUS
+   * ========================================================= */
+
+  useEffect(() => {
+    if (!schedule || !open) {
+      setAttendanceAvailable(false);
+      return;
+    }
+
+    function updateAttendanceStatus() {
+      setAttendanceAvailable(isAttendanceTime(schedule));
+    }
+
+    updateAttendanceStatus();
+
+    /*
+     * Update setiap detik supaya tombol otomatis
+     * aktif ketika waktu mulai tercapai dan
+     * kembali disabled ketika waktu selesai.
+     */
+    const interval = setInterval(updateAttendanceStatus, 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [schedule, open]);
+
+  if (!schedule) return null;
+
+  const isOnline = schedule.meeting_type === "online";
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md overflow-hidden rounded-2xl p-0 [&>button]:hidden">
+        {/* HEADER */}
+        <DialogHeader className="border-b bg-muted/30 px-6 py-5">
+          {/* CUSTOM CLOSE */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="
+              absolute right-4 top-4 z-10 flex h-8 w-8 cursor-pointer items-center justify-center
+              rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground
+            "
+            aria-label="Tutup"
+          >
+            <X className="h-5 w-5" />
+          </button>
+
+          <DialogTitle className="pr-8 text-lg font-semibold">
+            Detail Pertemuan
+          </DialogTitle>
+
+          <DialogDescription className="sr-only">
+            Detail jadwal kelas dan informasi kehadiran peserta.
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* CONTENT */}
+        <div className="space-y-5 px-6 py-5">
+          {/* TITLE */}
+          <div>
+            <h2 className="text-base font-semibold">{schedule.name}</h2>
+
+            <div
+              className={`
+                mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium
+                ${isOnline ? "bg-accent-blue/10 text-accent-blue" : "bg-muted text-primary"}
+              `}
+            >
+              {isOnline ? (
+                <Video className="h-3.5 w-3.5" />
+              ) : (
+                <MapPin className="h-3.5 w-3.5" />
+              )}
+
+              {isOnline ? "Pertemuan Online" : "Pertemuan Offline"}
+            </div>
+          </div>
+
+          {/* DETAILS */}
+          <div className="space-y-3">
+            {/* DATE */}
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                <CalendarDays className="h-4 w-4 text-primary" />
+              </div>
+
+              <div>
+                <p className="text-xs text-muted-foreground">Tanggal</p>
+                <p className="mt-0.5 text-sm font-medium">
+                  {formatDate(schedule.date)}
+                </p>
+              </div>
+            </div>
+
+            {/* TIME */}
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                <Clock className="h-4 w-4 text-primary" />
+              </div>
+
+              <div>
+                <p className="text-xs text-muted-foreground">Waktu</p>
+                <p className="mt-0.5 text-sm font-medium">
+                  {schedule.start_time} - {schedule.end_time} WIB
+                </p>
+              </div>
+            </div>
+
+            {/* MENTOR */}
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                <User className="h-4 w-4 text-primary" />
+              </div>
+
+              <div>
+                <p className="text-xs text-muted-foreground">Mentor</p>
+                <p className="mt-0.5 text-sm font-medium">
+                  {schedule.mentor || "Belum ditentukan"}
+                </p>
+              </div>
+            </div>
+
+            {/* LOCATION */}
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                {isOnline ? (
+                  <Video className="h-4 w-4 text-primary" />
+                ) : (
+                  <MapPin className="h-4 w-4 text-primary" />
+                )}
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">
+                  {isOnline ? "Platform" : "Lokasi"}
+                </p>
+
+                <p className="mt-0.5 truncate text-sm font-medium">
+                  {schedule.location || "Belum ditentukan"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* ATTENDANCE */}
+          <div className="border-t pt-4">
+            <button
+              type="button"
+              disabled={!attendanceAvailable}
+              className="
+                mx-auto block w-auto rounded-xl bg-primary px-5 py-2
+                text-sm font-semibold text-primary-foreground transition hover:opacity-90
+                disabled:cursor-not-allowed disabled:opacity-40
+              "
+            >
+              Tandai Hadir
+            </button>
+
+            <p className="mt-2 text-center text-[11px] text-muted-foreground">
+              {attendanceAvailable
+                ? "Anda dapat menandai kehadiran sekarang."
+                : "Tombol akan aktif sesuai waktu pertemuan."}
+            </p>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
