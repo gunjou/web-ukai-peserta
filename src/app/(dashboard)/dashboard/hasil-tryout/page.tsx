@@ -44,7 +44,7 @@ export default function HasilTryoutPage() {
     if (!Array.isArray(results)) return [];
 
     return results.filter((item) =>
-      (item?.title ?? "").toLowerCase().includes(keyword),
+      (item?.title ?? "").toLowerCase().includes(keyword)
     );
   }, [search, results]);
 
@@ -55,7 +55,7 @@ export default function HasilTryoutPage() {
 
   const totalPages = Math.max(
     1,
-    Math.ceil(filteredData.length / ITEMS_PER_PAGE),
+    Math.ceil(filteredData.length / ITEMS_PER_PAGE)
   );
 
   const paginatedData = useMemo(() => {
@@ -105,15 +105,28 @@ export default function HasilTryoutPage() {
             {/* Tombol */}
             <div className="flex gap-2">
               <button
+                onClick={() => router.push("/dashboard/hasil-tryout/statistik")}
+                className="
+      inline-flex items-center gap-2
+      rounded-xl border px-4 py-2
+      text-sm font-medium
+      hover:bg-muted transition
+    "
+              >
+                <BarChart3 className="h-4 w-4" />
+                Analytic
+              </button>
+
+              <button
                 onClick={() =>
                   router.push("/dashboard/hasil-tryout/leaderboard")
                 }
                 className="
-            inline-flex items-center gap-2
-            rounded-xl border px-4 py-2
-            text-sm font-medium
-            hover:bg-muted transition
-          "
+      inline-flex items-center gap-2
+      rounded-xl border px-4 py-2
+      text-sm font-medium
+      hover:bg-muted transition
+    "
               >
                 <Trophy className="h-4 w-4" />
                 Leaderboard
@@ -147,12 +160,10 @@ export default function HasilTryoutPage() {
         {loading ? (
           <TryoutSkeleton />
         ) : filteredData.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
-            <EmptyState
-              title="Belum Ada Hasil Tryout"
-              description="Hasil tryout belum tersedia untuk akun Anda."
-            />
-          </div>
+          <EmptyState
+            title="Belum Ada Hasil Tryout"
+            description="Hasil tryout belum tersedia untuk akun Anda."
+          />
         ) : (
           <>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -210,7 +221,7 @@ export default function HasilTryoutPage() {
                       >
                         {page}
                       </button>
-                    ),
+                    )
                   )}
 
                   <button

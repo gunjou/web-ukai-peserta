@@ -21,6 +21,14 @@ export const API_ENDPOINTS = {
       `/api/v2/materi/peserta/private?type=${type}`,
   },
 
+  SCHEDULE: {
+    LIST: "/api/v2/jadwal",
+    DETAIL: (scheduleId: number) => `/api/v2/jadwal/${scheduleId}`,
+    CHECK_IN: "/api/v2/absensi/peserta/me/check-in",
+    ATTENDANCE: (scheduleId: number) =>
+      `/api/v2/absensi/peserta/me/${scheduleId}`,
+  },
+
   TRYOUT: {
     LIST: "/api/v2/tryout/peserta",
     START: (tryoutId: number) => `/api/v2/tryout/${tryoutId}/start`,

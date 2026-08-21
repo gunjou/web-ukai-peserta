@@ -1,6 +1,14 @@
 "use client";
 
-import { CalendarDays, Clock, MapPin, User, Video, X } from "lucide-react";
+import {
+  CalendarDays,
+  Clock,
+  Loader2,
+  MapPin,
+  User,
+  Video,
+  X,
+} from "lucide-react";
 
 import { useEffect, useState } from "react";
 
@@ -13,11 +21,18 @@ import {
 } from "@/components/ui/dialog";
 
 import type { Schedule } from "@/types/schedule";
+import {
+  checkIn,
+  getAttendanceStatus,
+  getScheduleDetail,
+  toSchedule,
+} from "@/services/schedule.service";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   schedule: Schedule | null;
+  token: string | null;
 }
 
 function formatDate(date: string) {
@@ -62,18 +77,48 @@ export default function ScheduleDetailDialog({
   open,
   onClose,
   schedule,
+  token,
 }: Props) {
   const [attendanceAvailable, setAttendanceAvailable] = useState(false);
+  const [checkedIn, setCheckedIn] = useState(false);
+  const [attendanceStatus, setAttendanceStatus] = useState<string | null>(null);
+  const [checkingIn, setCheckingIn] = useState(false);
+  const [detail, setDetail] = useState<Schedule | null>(schedule);
+  const [error, setError] = useState<string | null>(null);
 
   /* =========================================================
    * UPDATE ATTENDANCE STATUS
    * ========================================================= */
 
   useEffect(() => {
-    if (!schedule || !open) {
+    if (!schedule || !open || !token) {
       setAttendanceAvailable(false);
       return;
     }
+
+    const activeSchedule = schedule;
+    const activeToken = token;
+
+    setDetail(activeSchedule);
+    setCheckedIn(false);
+    setAttendanceStatus(null);
+    setError(null);
+
+    async function fetchAttendance() {
+      try {
+        const [detailResult, attendanceResult] = await Promise.all([
+          getScheduleDetail(activeSchedule.id, activeToken),
+          getAttendanceStatus(activeSchedule.id, activeToken),
+        ]);
+        setDetail(toSchedule(detailResult.data));
+        setCheckedIn(attendanceResult.data.sudah_absen);
+        setAttendanceStatus(attendanceResult.data.status_kehadiran);
+      } catch (requestError) {
+        console.error(requestError);
+      }
+    }
+
+    fetchAttendance();
 
     function updateAttendanceStatus() {
       setAttendanceAvailable(isAttendanceTime(schedule));
@@ -91,11 +136,55 @@ export default function ScheduleDetailDialog({
     return () => {
       clearInterval(interval);
     };
-  }, [schedule, open]);
+  }, [schedule, open, token]);
 
-  if (!schedule) return null;
+  if (!detail) return null;
 
-  const isOnline = schedule.meeting_type === "online";
+  const isOnline = detail.meeting_type === "online";
+  const hasAttended =
+    checkedIn || attendanceStatus?.trim().toUpperCase() === "HADIR";
+
+  async function handleCheckIn() {
+    if (!token || !detail || checkingIn) return;
+
+    setCheckingIn(true);
+    setError(null);
+
+    try {
+      const position = await new Promise<GeolocationPosition>(
+        (resolve, reject) => {
+          if (!navigator.geolocation) {
+            reject(new Error("Lokasi perangkat tidak tersedia."));
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+          });
+        }
+      );
+
+      await checkIn(
+        {
+          id_jadwal: detail.id,
+          latitude: position.coords.latitude,
+          location_accuracy: position.coords.accuracy,
+          longitude: position.coords.longitude,
+        },
+        token
+      );
+      setCheckedIn(true);
+      setAttendanceStatus("HADIR");
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Kehadiran belum dapat ditandai."
+      );
+    } finally {
+      setCheckingIn(false);
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -128,12 +217,16 @@ export default function ScheduleDetailDialog({
         <div className="space-y-5 px-6 py-5">
           {/* TITLE */}
           <div>
-            <h2 className="text-base font-semibold">{schedule.name}</h2>
+            <h2 className="text-base font-semibold">{detail.name}</h2>
 
             <div
               className={`
                 mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium
-                ${isOnline ? "bg-accent-blue/10 text-accent-blue" : "bg-muted text-primary"}
+                ${
+                  isOnline
+                    ? "bg-accent-blue/10 text-accent-blue"
+                    : "bg-muted text-primary"
+                }
               `}
             >
               {isOnline ? (
@@ -157,7 +250,7 @@ export default function ScheduleDetailDialog({
               <div>
                 <p className="text-xs text-muted-foreground">Tanggal</p>
                 <p className="mt-0.5 text-sm font-medium">
-                  {formatDate(schedule.date)}
+                  {formatDate(detail.date)}
                 </p>
               </div>
             </div>
@@ -171,7 +264,7 @@ export default function ScheduleDetailDialog({
               <div>
                 <p className="text-xs text-muted-foreground">Waktu</p>
                 <p className="mt-0.5 text-sm font-medium">
-                  {schedule.start_time} - {schedule.end_time} WIB
+                  {detail.start_time} - {detail.end_time} WIB
                 </p>
               </div>
             </div>
@@ -185,7 +278,7 @@ export default function ScheduleDetailDialog({
               <div>
                 <p className="text-xs text-muted-foreground">Mentor</p>
                 <p className="mt-0.5 text-sm font-medium">
-                  {schedule.mentor || "Belum ditentukan"}
+                  {detail.mentor || "Belum ditentukan"}
                 </p>
               </div>
             </div>
@@ -206,7 +299,7 @@ export default function ScheduleDetailDialog({
                 </p>
 
                 <p className="mt-0.5 truncate text-sm font-medium">
-                  {schedule.location || "Belum ditentukan"}
+                  {detail.location || "Belum ditentukan"}
                 </p>
               </div>
             </div>
@@ -214,22 +307,32 @@ export default function ScheduleDetailDialog({
 
           {/* ATTENDANCE */}
           <div className="border-t pt-4">
-            <button
-              type="button"
-              disabled={!attendanceAvailable}
-              className="
-                mx-auto block w-auto rounded-xl bg-primary px-5 py-2
-                text-sm font-semibold text-primary-foreground transition hover:opacity-90
-                disabled:cursor-not-allowed disabled:opacity-40
-              "
-            >
-              Tandai Hadir
-            </button>
+            {!hasAttended && (
+              <button
+                type="button"
+                disabled={!attendanceAvailable || checkingIn}
+                onClick={handleCheckIn}
+                className="
+                  mx-auto block w-auto rounded-xl bg-primary px-5 py-2
+                  text-sm font-semibold text-primary-foreground transition hover:opacity-90
+                  disabled:cursor-not-allowed disabled:opacity-40
+                "
+              >
+                {checkingIn ? (
+                  <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+                ) : (
+                  "Tandai Hadir"
+                )}
+              </button>
+            )}
 
             <p className="mt-2 text-center text-[11px] text-muted-foreground">
-              {attendanceAvailable
-                ? "Anda dapat menandai kehadiran sekarang."
-                : "Tombol akan aktif sesuai waktu pertemuan."}
+              {error ||
+                (attendanceStatus
+                  ? `Status kehadiran: ${attendanceStatus}`
+                  : attendanceAvailable
+                  ? "Anda dapat menandai kehadiran sekarang."
+                  : "Tombol akan aktif sesuai waktu pertemuan.")}
             </p>
           </div>
         </div>

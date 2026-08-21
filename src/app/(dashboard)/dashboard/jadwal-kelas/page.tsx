@@ -1,89 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import CalendarGrid from "@/components/jadwal/calendar-grid";
 import CalendarNavigation from "@/components/jadwal/calendar-navigation";
 import ScheduleDetailDialog from "@/components/jadwal/schedule-detail-dialog";
+import { getSchedules, toSchedule } from "@/services/schedule.service";
 
 import type { Schedule } from "@/types/schedule";
-
-/* =========================================================
- * DUMMY DATA
- * ========================================================= */
-
-const scheduleData: Schedule[] = [
-  {
-    id: 1,
-    date: "2026-08-03",
-    name: "Pembahasan Modul 1",
-    start_time: "08:00",
-    end_time: "10:00",
-    meeting_type: "online",
-    mentor: "dr. Andi Setiawan",
-    location: "Google Meet",
-  },
-  {
-    id: 2,
-    date: "2026-08-05",
-    name: "Diskusi Farmakologi",
-    start_time: "13:00",
-    end_time: "15:00",
-    meeting_type: "offline",
-    mentor: "dr. Budi Santoso",
-    location: "Ruang Kelas A",
-  },
-  {
-    id: 3,
-    date: "2026-08-08",
-    name: "Pembahasan Soal Tryout",
-    start_time: "09:00",
-    end_time: "11:00",
-    meeting_type: "online",
-    mentor: "dr. Citra Dewi",
-    location: "Google Meet",
-  },
-  {
-    id: 4,
-    date: "2026-08-12",
-    name: "Mentoring Bersama",
-    start_time: "15:00",
-    end_time: "17:00",
-    meeting_type: "offline",
-    mentor: "dr. Andi Setiawan",
-    location: "Ruang Mentor",
-  },
-  {
-    id: 5,
-    date: "2026-08-15",
-    name: "Review Materi Mingguan",
-    start_time: "08:00",
-    end_time: "09:30",
-    meeting_type: "online",
-    mentor: "dr. Citra Dewi",
-    location: "Google Meet",
-  },
-  {
-    id: 6,
-    date: "2026-08-18",
-    name: "Pembahasan Kasus",
-    start_time: "13:00",
-    end_time: "14:42",
-    meeting_type: "offline",
-    mentor: "dr. Budi Santoso",
-    location: "Ruang Kelas B",
-  },
-  {
-    id: 7,
-    date: "2026-08-19",
-    name: "Pembahasan Kasus",
-    start_time: "10:00",
-    end_time: "12:00",
-    meeting_type: "offline",
-    mentor: "dr. Budi Santoso",
-    location: "Ruang Kelas B",
-  },
-];
 
 /* =========================================================
  * CALENDAR HELPER
@@ -144,19 +68,49 @@ export default function JadwalKelasPage() {
    * Saat API sudah tersedia, ini bisa diganti
    * dengan new Date().
    */
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1));
+  const [currentDate, setCurrentDate] = useState(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  });
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   /*
    * State jadwal yang sedang dipilih.
    */
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(
-    null,
+    null
   );
 
   /*
    * State untuk membuka / menutup modal detail.
    */
   const [openDetail, setOpenDetail] = useState(false);
+
+  useEffect(() => {
+    async function fetchSchedules() {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const result = await getSchedules(token);
+        setSchedules(
+          Array.isArray(result.data) ? result.data.map(toSchedule) : []
+        );
+      } catch (requestError) {
+        console.error(requestError);
+        setError("Jadwal belum dapat dimuat. Silakan coba lagi.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchSchedules();
+  }, []);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -172,15 +126,13 @@ export default function JadwalKelasPage() {
 
   function handlePreviousMonth() {
     setCurrentDate(
-      (previous) =>
-        new Date(previous.getFullYear(), previous.getMonth() - 1, 1),
+      (previous) => new Date(previous.getFullYear(), previous.getMonth() - 1, 1)
     );
   }
 
   function handleNextMonth() {
     setCurrentDate(
-      (previous) =>
-        new Date(previous.getFullYear(), previous.getMonth() + 1, 1),
+      (previous) => new Date(previous.getFullYear(), previous.getMonth() + 1, 1)
     );
   }
 
@@ -275,13 +227,23 @@ export default function JadwalKelasPage() {
             </div>
 
             {/* CALENDAR */}
-            <CalendarGrid
-              year={year}
-              month={month}
-              calendar={calendar}
-              schedules={scheduleData}
-              onScheduleClick={handleScheduleClick}
-            />
+            {loading ? (
+              <div className="flex min-h-[420px] items-center justify-center text-sm text-muted-foreground">
+                Memuat jadwal...
+              </div>
+            ) : error ? (
+              <div className="flex min-h-[420px] items-center justify-center px-6 text-center text-sm text-destructive">
+                {error}
+              </div>
+            ) : (
+              <CalendarGrid
+                year={year}
+                month={month}
+                calendar={calendar}
+                schedules={schedules}
+                onScheduleClick={handleScheduleClick}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -294,6 +256,11 @@ export default function JadwalKelasPage() {
         open={openDetail}
         onClose={handleCloseDetail}
         schedule={selectedSchedule}
+        token={
+          typeof window === "undefined"
+            ? null
+            : localStorage.getItem("access_token")
+        }
       />
     </div>
   );

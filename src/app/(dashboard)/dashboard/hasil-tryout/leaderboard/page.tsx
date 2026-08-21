@@ -170,13 +170,10 @@ export default function LeaderboardClassPage() {
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => router.push("/dashboard/hasil-tryout")}
-              className="
-          inline-flex h-9 w-9 items-center justify-center
-          rounded-xl border hover:bg-muted transition
-        "
-              aria-label="Kembali"
+              className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium hover:bg-muted transition"
             >
               <ArrowLeft className="h-4 w-4" />
+              Kembali
             </button>
 
             <div className="min-w-0">
