@@ -7,6 +7,8 @@ export interface Schedule {
   start_time: string;
   end_time: string;
   meeting_type: MeetingType;
+  topik?: string | null;
+  catatan?: string | null;
   mentor?: string;
   location?: string;
   id_paketkelas?: number;
@@ -34,6 +36,8 @@ export interface ScheduleApiItem {
   waktu_mulai_efektif: string;
   waktu_selesai_efektif: string;
   type_pertemuan: string;
+  topik?: string | null;
+  catatan?: string | null;
 }
 
 export type ScheduleDetail = ScheduleApiItem;

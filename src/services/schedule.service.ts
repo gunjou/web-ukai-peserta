@@ -40,11 +40,13 @@ export function toSchedule(item: ScheduleApiItem) {
     end_time: item.waktu_selesai_efektif.slice(0, 5),
     meeting_type:
       item.type_pertemuan.toLowerCase() === "online" ? "online" : "offline",
+    topik: item.topik,
+    catatan: item.catatan,
     mentor: item.nickname_mentor || item.nama_mentor,
     location:
       item.type_pertemuan.toLowerCase() === "online"
         ? "Pertemuan online"
-        : "Lokasi belum tersedia",
+        : "Offline",
     id_paketkelas: item.id_paketkelas,
     id_mentor: item.id_mentor,
     nickname_mentor: item.nickname_mentor,

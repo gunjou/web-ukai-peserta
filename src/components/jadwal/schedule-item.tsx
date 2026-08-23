@@ -62,7 +62,9 @@ export default function ScheduleItem({ schedule, onClick }: Props) {
         {/* TITLE */}
         <div className="flex items-start gap-1.5">
           <div
-            className={`mt-0.5 shrink-0 ${isOnline ? "text-accent-blue" : "text-primary"}`}
+            className={`mt-0.5 shrink-0 ${
+              isOnline ? "text-accent-blue" : "text-primary"
+            }`}
           >
             {isOnline ? (
               <Video className="h-3 w-3" />
@@ -101,6 +103,18 @@ export default function ScheduleItem({ schedule, onClick }: Props) {
             </>
           )}
         </div>
+
+        {schedule.topik && (
+          <p className="mt-1 hidden truncate text-[9px] text-muted-foreground sm:block">
+            Topik: {schedule.topik}
+          </p>
+        )}
+
+        {schedule.catatan && (
+          <p className="hidden truncate text-[9px] text-muted-foreground/80 sm:block">
+            Catatan: {schedule.catatan}
+          </p>
+        )}
       </button>
     </>
   );

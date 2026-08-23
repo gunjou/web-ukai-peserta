@@ -5,6 +5,8 @@ import {
   Clock,
   Loader2,
   MapPin,
+  NotebookPen,
+  StickyNote,
   User,
   Video,
   X,
@@ -300,6 +302,34 @@ export default function ScheduleDetailDialog({
 
                 <p className="mt-0.5 truncate text-sm font-medium">
                   {detail.location || "Belum ditentukan"}
+                </p>
+              </div>
+            </div>
+
+            {/* TOPIC */}
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                <NotebookPen className="h-4 w-4 text-primary" />
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Topik</p>
+                <p className="mt-0.5 whitespace-pre-wrap text-sm font-medium">
+                  {detail.topik || "Belum tersedia"}
+                </p>
+              </div>
+            </div>
+
+            {/* NOTES */}
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                <StickyNote className="h-4 w-4 text-primary" />
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Catatan</p>
+                <p className="mt-0.5 whitespace-pre-wrap text-sm font-medium">
+                  {detail.catatan || "Tidak ada catatan"}
                 </p>
               </div>
             </div>

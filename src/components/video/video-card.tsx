@@ -81,7 +81,7 @@ export default function VideoCard({ video }: Props) {
             : "bg-muted text-muted-foreground"
         }`}
       >
-        {opened ? "Sudah dibuka" : "Belum dibuka"}
+        {opened ? "Selesai" : "Belum dibuka"}
       </span>
 
       {/* Action */}

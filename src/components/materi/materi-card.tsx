@@ -81,7 +81,7 @@ export default function MateriCard({ materi }: Props) {
             : "bg-muted text-muted-foreground"
         }`}
       >
-        {opened ? "Sudah dibuka" : "Belum dibuka"}
+        {opened ? "Selesai" : "Belum dibuka"}
       </span>
 
       {/* Actions */}
