@@ -230,7 +230,7 @@ export default function ContentViewer({
           {/* LOGO OVERLAY */}
           <Image
             src="/images/logo_syndrome.svg"
-            alt="UKAI Syndrome"
+            alt="Syndrome UKAI"
             width={50}
             height={50}
             className="

@@ -11,8 +11,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "UKAI Syndrome",
-  description: "Platform Pembelajaran UKAI Syndrome",
+  title: "Syndrome UKAI",
+  description: "Platform Pembelajaran Syndrome UKAI",
   icons: {
     icon: "/favicon.ico",
   },

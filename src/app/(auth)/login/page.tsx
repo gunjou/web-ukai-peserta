@@ -195,7 +195,7 @@ export default function LoginPage() {
           >
             <Image
               src="/images/logo_syndrome.svg"
-              alt="UKAI Syndrome"
+              alt="Syndrome UKAI"
               width={65}
               height={65}
               className="object-contain"
