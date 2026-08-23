@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import ModulGrid from "@/components/modul/modul-grid";
 import EmptyState from "@/components/shared/empty-state";
 import { getModulPeserta, Modul } from "@/services/modul.service";
+import { getMateriProgressByType } from "@/services/materi.service";
 
 const ITEMS_PER_PAGE_OPTIONS = [6, 9, 12, 24];
 const DEFAULT_ITEMS_PER_PAGE = 9;
@@ -24,8 +25,32 @@ export default function ModulMateriPage() {
       const token = localStorage.getItem("access_token");
       if (!token) return;
 
-      const result = await getModulPeserta(token);
-      setModules(result.data);
+      const modulesResult = await getModulPeserta(token);
+      const progressByModule = await getMateriProgressByType(
+        modulesResult.data.map((module) => module.id),
+        "document",
+        token
+      );
+
+      setModules(
+        modulesResult.data.map((module) => ({
+          ...module,
+          progress: (() => {
+            const itemProgress = progressByModule.get(module.id);
+            if (!itemProgress) return undefined;
+
+            return {
+              total_materi: itemProgress.total,
+              materi_dibuka: itemProgress.opened,
+              materi_belum_dibuka: itemProgress.total - itemProgress.opened,
+              progress_percentage:
+                itemProgress.total > 0
+                  ? Math.round((itemProgress.opened / itemProgress.total) * 100)
+                  : 0,
+            };
+          })(),
+        }))
+      );
     } catch (error) {
       console.error(error);
     } finally {
@@ -39,7 +64,7 @@ export default function ModulMateriPage() {
     if (!Array.isArray(modules)) return [];
 
     return modules.filter((item) =>
-      (item?.title ?? "").toLowerCase().includes(keyword),
+      (item?.title ?? "").toLowerCase().includes(keyword)
     );
   }, [search, modules]);
 
@@ -223,7 +248,7 @@ export default function ModulMateriPage() {
                       >
                         {page}
                       </button>
-                    ),
+                    )
                   )}
 
                   <button

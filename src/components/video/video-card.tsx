@@ -3,8 +3,13 @@
 import { PlayCircle, ExternalLink } from "lucide-react";
 
 import { Materi } from "@/services/materi.service";
+import {
+  getOpenedMateriIds,
+  markMateriAsOpened,
+} from "@/services/materi.service";
 import ContentViewer from "../viewer/content-viewer";
 import { useState } from "react";
+import { getAccessToken } from "@/lib/auth";
 
 interface Props {
   video: Materi;
@@ -12,6 +17,23 @@ interface Props {
 
 export default function VideoCard({ video }: Props) {
   const [open, setOpen] = useState(false);
+  const [opened, setOpened] = useState(() =>
+    getOpenedMateriIds().includes(video.id)
+  );
+
+  async function handleOpen() {
+    setOpen(true);
+
+    const token = getAccessToken();
+    if (!token) return;
+
+    try {
+      await markMateriAsOpened(video.id, token);
+      setOpened(true);
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
   return (
     <div
@@ -52,10 +74,20 @@ export default function VideoCard({ video }: Props) {
         {video.title}
       </h3>
 
+      <span
+        className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+          opened
+            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+            : "bg-muted text-muted-foreground"
+        }`}
+      >
+        {opened ? "Sudah dibuka" : "Belum dibuka"}
+      </span>
+
       {/* Action */}
       <div className="mt-5">
         <button
-          onClick={() => setOpen(true)}
+          onClick={handleOpen}
           className="
             inline-flex
             items-center

@@ -19,6 +19,9 @@ export const API_ENDPOINTS = {
       `/api/v2/materi/peserta/${modulId}?type=${type}`,
     PRIVATE: (type: "document" | "video") =>
       `/api/v2/materi/peserta/private?type=${type}`,
+    PROGRESS_MONITORING: "/api/v2/materi/peserta/progress/monitoring",
+    PROGRESS: (materiId: number) =>
+      `/api/v2/materi/peserta/${materiId}/progress`,
   },
 
   SCHEDULE: {

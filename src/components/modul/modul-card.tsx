@@ -12,6 +12,25 @@ interface Props {
 }
 
 export default function ModulCard({ modul, href }: Props) {
+  const progressStatus = modul.progress
+    ? modul.progress.materi_dibuka === 0
+      ? {
+          label: "Belum dibuka",
+          className: "bg-muted text-muted-foreground",
+        }
+      : modul.progress.materi_dibuka >= modul.progress.total_materi
+      ? {
+          label: "Selesai",
+          className:
+            "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+        }
+      : {
+          label: "Progres",
+          className:
+            "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+        }
+    : null;
+
   return (
     <Link
       href={href}
@@ -56,6 +75,19 @@ export default function ModulCard({ modul, href }: Props) {
       >
         {modul.title}
       </h3>
+
+      {modul.progress && (
+        <div className="mt-4 flex items-center justify-between gap-3 text-xs">
+          <span
+            className={`rounded-full px-2.5 py-1 font-medium ${progressStatus?.className}`}
+          >
+            {progressStatus?.label}
+          </span>
+          <span className="text-muted-foreground">
+            {modul.progress.materi_dibuka}/{modul.progress.total_materi} materi
+          </span>
+        </div>
+      )}
     </Link>
   );
 }

@@ -4,6 +4,12 @@ import { API_ENDPOINTS } from "../lib/endpoints";
 export interface Modul {
   id: number;
   title: string;
+  progress?: {
+    total_materi: number;
+    materi_dibuka: number;
+    materi_belum_dibuka: number;
+    progress_percentage: number;
+  };
 }
 
 interface ModulResponse {

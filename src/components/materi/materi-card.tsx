@@ -2,9 +2,14 @@
 
 import { Download, FileText, ExternalLink } from "lucide-react";
 
-import { Materi } from "@/services/materi.service";
+import {
+  getOpenedMateriIds,
+  markMateriAsOpened,
+  Materi,
+} from "@/services/materi.service";
 import { useState } from "react";
 import ContentViewer from "../viewer/content-viewer";
+import { getAccessToken } from "@/lib/auth";
 
 interface Props {
   materi: Materi;
@@ -12,6 +17,23 @@ interface Props {
 
 export default function MateriCard({ materi }: Props) {
   const [open, setOpen] = useState(false);
+  const [opened, setOpened] = useState(() =>
+    getOpenedMateriIds().includes(materi.id)
+  );
+
+  async function handleOpen() {
+    setOpen(true);
+
+    const token = getAccessToken();
+    if (!token) return;
+
+    try {
+      await markMateriAsOpened(materi.id, token);
+      setOpened(true);
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
   return (
     <div
@@ -52,6 +74,16 @@ export default function MateriCard({ materi }: Props) {
         {materi.title}
       </h3>
 
+      <span
+        className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+          opened
+            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+            : "bg-muted text-muted-foreground"
+        }`}
+      >
+        {opened ? "Sudah dibuka" : "Belum dibuka"}
+      </span>
+
       {/* Actions */}
       <div
         className="
@@ -63,7 +95,7 @@ export default function MateriCard({ materi }: Props) {
       >
         {/* View */}
         <button
-          onClick={() => setOpen(true)}
+          onClick={handleOpen}
           className="
             inline-flex
             items-center

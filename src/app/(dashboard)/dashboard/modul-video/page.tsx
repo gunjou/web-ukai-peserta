@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import ModulGrid from "@/components/modul/modul-grid";
 import EmptyState from "@/components/shared/empty-state";
 import { getModulPeserta, Modul } from "@/services/modul.service";
+import { getMateriProgressByType } from "@/services/materi.service";
 import { getAccessToken } from "@/lib/auth";
 
 const ITEMS_PER_PAGE_OPTIONS = [6, 9, 12, 24];
@@ -24,12 +25,42 @@ export default function ModulVideoPage() {
     try {
       const token = getAccessToken();
 
-      console.log("Fetching modules with token:", token);
-
       if (!token) return;
 
       const result = await getModulPeserta(token);
       setModules(result.data);
+
+      try {
+        const progressByModule = await getMateriProgressByType(
+          result.data.map((module) => module.id),
+          "video",
+          token
+        );
+
+        setModules(
+          result.data.map((module) => {
+            const itemProgress = progressByModule.get(module.id);
+            if (!itemProgress) return module;
+
+            return {
+              ...module,
+              progress: {
+                total_materi: itemProgress.total,
+                materi_dibuka: itemProgress.opened,
+                materi_belum_dibuka: itemProgress.total - itemProgress.opened,
+                progress_percentage:
+                  itemProgress.total > 0
+                    ? Math.round(
+                        (itemProgress.opened / itemProgress.total) * 100
+                      )
+                    : 0,
+              },
+            };
+          })
+        );
+      } catch (progressError) {
+        console.error("Gagal memuat progress video:", progressError);
+      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -43,7 +74,7 @@ export default function ModulVideoPage() {
     if (!Array.isArray(modules)) return [];
 
     return modules.filter((item) =>
-      (item?.title ?? "").toLowerCase().includes(keyword),
+      (item?.title ?? "").toLowerCase().includes(keyword)
     );
   }, [search, modules]);
 
@@ -227,7 +258,7 @@ export default function ModulVideoPage() {
                       >
                         {page}
                       </button>
-                    ),
+                    )
                   )}
 
                   <button
