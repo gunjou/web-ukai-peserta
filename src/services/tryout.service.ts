@@ -12,6 +12,7 @@ import {
   SaveAnswersRequest,
   LeaderboardResponse,
   IsOngoingResponse,
+  TryoutArrearsResponse,
 } from "@/types/tryout";
 
 /* ========== TRYOUT LIST ========== */
@@ -19,6 +20,13 @@ import {
 /* GET TRYOUT LIST */
 export async function getTryouts(token: string) {
   return apiClient.get<TryoutResponse>(API_ENDPOINTS.TRYOUT.LIST, {
+    token,
+  });
+}
+
+/* GET TRYOUT ARREARS */
+export async function getTryoutArrears(token: string) {
+  return apiClient.get<TryoutArrearsResponse>(API_ENDPOINTS.TRYOUT.ARREARS, {
     token,
   });
 }

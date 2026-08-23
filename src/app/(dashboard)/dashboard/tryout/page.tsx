@@ -1,10 +1,14 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import EmptyState from "@/components/shared/empty-state";
 import TryoutItem from "@/components/tryout/tryout-item";
 import TryoutSkeleton from "@/components/tryout/tryout-skeleton";
+import { Button } from "@/components/ui/button";
+import { AlertCircle } from "lucide-react";
 
+import { APP_ROUTES } from "@/lib/app-routes";
 import { getTryouts } from "@/services/tryout.service";
 import { Tryout } from "@/types/tryout";
 
@@ -66,7 +70,7 @@ export default function TryoutPage() {
 
   const totalPages = Math.max(
     1,
-    Math.ceil(filteredData.length / ITEMS_PER_PAGE),
+    Math.ceil(filteredData.length / ITEMS_PER_PAGE)
   );
 
   const paginatedData = useMemo(() => {
@@ -116,28 +120,27 @@ export default function TryoutPage() {
             </p>
           </div>
 
-          {/* RIGHT: SEARCH (desktop) */}
-          <div className="w-full md:w-80">
+          {/* RIGHT: SEARCH AND ARREARS */}
+          <div className="flex w-full flex-col gap-2 sm:flex-row md:w-auto">
+            <Button
+              asChild
+              className="h-12 rounded-xl border-amber-300 bg-amber-50 text-amber-700 shadow-sm transition-all hover:bg-amber-100 hover:text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400 dark:hover:bg-amber-950/60"
+            >
+              <Link
+                href={APP_ROUTES.TRYOUT.ARREARS}
+                className="flex items-center gap-2"
+              >
+                <AlertCircle className="h-5 w-5" />
+                <span>Lihat Tunggakan</span>
+              </Link>
+            </Button>
+
             <input
               type="text"
               placeholder="Cari tryout..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="
-          w-full
-          rounded-xl
-          border
-          bg-background
-          px-4
-          py-3
-          text-sm
-          shadow-sm
-          placeholder:text-muted-foreground
-          focus:border-primary
-          focus:outline-none
-          focus:ring-2
-          focus:ring-primary/20
-        "
+              className="w-full rounded-xl border bg-background px-4 py-3 text-sm shadow-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:w-80"
             />
           </div>
         </div>
@@ -173,8 +176,8 @@ export default function TryoutPage() {
               statusFilter === "done"
                 ? "Belum ada tryout yang sudah kamu kerjakan."
                 : statusFilter === "not_done"
-                  ? "Semua tryout sudah kamu kerjakan."
-                  : "Tryout belum tersedia untuk akun Anda."
+                ? "Semua tryout sudah kamu kerjakan."
+                : "Tryout belum tersedia untuk akun Anda."
             }
           />
         ) : (
@@ -191,39 +194,38 @@ export default function TryoutPage() {
             </div>
 
             {/* PAGINATION */}
-            {totalPages > 1 && (
-              <div className="mt-6 flex flex-col items-center justify-between gap-3 sm:flex-row">
-                <p className="text-sm text-muted-foreground">
-                  Halaman {currentPage} dari {totalPages} ({filteredData.length}{" "}
-                  hasil)
-                </p>
+            <div className="mt-6 flex flex-col items-center justify-between gap-3 sm:flex-row">
+              <p className="text-sm text-muted-foreground">
+                Halaman {currentPage} dari {totalPages} ({filteredData.length}{" "}
+                hasil)
+              </p>
 
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => goToPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="
                       rounded-lg border px-3 py-2 text-sm
                       disabled:opacity-40 disabled:cursor-not-allowed
                       hover:bg-muted transition
                     "
-                  >
-                    Sebelumnya
-                  </button>
+                >
+                  Sebelumnya
+                </button>
 
-                  {getPageNumbers().map((page, idx) =>
-                    page === "..." ? (
-                      <span
-                        key={`ellipsis-${idx}`}
-                        className="px-2 text-sm text-muted-foreground select-none"
-                      >
-                        ...
-                      </span>
-                    ) : (
-                      <button
-                        key={page}
-                        onClick={() => goToPage(page)}
-                        className={`
+                {getPageNumbers().map((page, idx) =>
+                  page === "..." ? (
+                    <span
+                      key={`ellipsis-${idx}`}
+                      className="px-2 text-sm text-muted-foreground select-none"
+                    >
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={page}
+                      onClick={() => goToPage(page)}
+                      className={`
                           h-9 w-9 rounded-lg text-sm border transition
                           ${
                             page === currentPage
@@ -231,26 +233,25 @@ export default function TryoutPage() {
                               : "hover:bg-muted"
                           }
                         `}
-                      >
-                        {page}
-                      </button>
-                    ),
-                  )}
+                    >
+                      {page}
+                    </button>
+                  )
+                )}
 
-                  <button
-                    onClick={() => goToPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="
+                <button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="
                       rounded-lg border px-3 py-2 text-sm
                       disabled:opacity-40 disabled:cursor-not-allowed
                       hover:bg-muted transition
                     "
-                  >
-                    Selanjutnya
-                  </button>
-                </div>
+                >
+                  Selanjutnya
+                </button>
               </div>
-            )}
+            </div>
           </>
         )}
       </div>

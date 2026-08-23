@@ -34,6 +34,7 @@ export const API_ENDPOINTS = {
 
   TRYOUT: {
     LIST: "/api/v2/tryout/peserta",
+    ARREARS: "/api/v2/tryout/peserta/tunggakan",
     START: (tryoutId: number) => `/api/v2/tryout/${tryoutId}/start`,
     ATTEMPT: (attemptToken: string) => `/api/v2/tryout/attempt/${attemptToken}`,
     ANSWERS: (attemptToken: string) =>

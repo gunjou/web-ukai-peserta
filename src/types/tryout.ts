@@ -19,6 +19,30 @@ export interface TryoutResponse {
   data: Tryout[];
 }
 
+export interface TryoutArrearsItem {
+  id_tryout: number;
+  title: string;
+  total_soal: number;
+  soal_dikerjakan: number;
+  tunggakan: number;
+  progress_percentage: number;
+}
+
+export interface TryoutArrearsResponse {
+  status: string;
+  message: string;
+  data: {
+    summary: {
+      total_tryout: number;
+      total_soal: number;
+      soal_dikerjakan: number;
+      tunggakan: number;
+      progress_percentage: number;
+    };
+    tryouts: TryoutArrearsItem[];
+  };
+}
+
 /* ========== START TRYOUT ========== */
 export interface StartTryoutResponse {
   status: string;
