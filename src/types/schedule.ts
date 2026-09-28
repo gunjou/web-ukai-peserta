@@ -17,6 +17,12 @@ export interface Schedule {
   original_date?: string;
   original_start_time?: string;
   original_end_time?: string;
+
+  // Attendance
+  id_absensi_peserta?: number | null;
+  status_kehadiran?: string | null;
+  check_in_at?: string | null;
+  sudah_absen?: boolean;
 }
 
 export interface ScheduleApiItem {
@@ -26,24 +32,35 @@ export interface ScheduleApiItem {
   id_mentor: number;
   nama_mentor: string;
   nickname_mentor: string;
+
   tanggal: string;
   waktu_mulai: string;
   waktu_selesai: string;
+
   tanggal_reschedule: string | null;
   waktu_mulai_reschedule: string | null;
   waktu_selesai_reschedule: string | null;
+
   tanggal_efektif: string;
   waktu_mulai_efektif: string;
   waktu_selesai_efektif: string;
+
   type_pertemuan: string;
+
   topik?: string | null;
   catatan?: string | null;
+
+  // Attendance dari endpoint detail
+  id_absensi_peserta: number | null;
+  status_kehadiran: string | null;
+  check_in_at: string | null;
+  sudah_absen: boolean;
 }
 
 export type ScheduleDetail = ScheduleApiItem;
 
 export interface AttendanceStatus {
-  id_absensi_peserta: number;
+  id_absensi_peserta: number | null;
   id_jadwal: number;
   status_kehadiran: string | null;
   check_in_at: string | null;

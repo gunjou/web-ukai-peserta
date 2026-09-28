@@ -1,7 +1,9 @@
 "use client";
 
+import { PlayCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import AttendanceTutorialDialog from "@/components/jadwal/attendance-tutorial-dialog";
 import CalendarGrid from "@/components/jadwal/calendar-grid";
 import CalendarNavigation from "@/components/jadwal/calendar-navigation";
 import ScheduleDetailDialog from "@/components/jadwal/schedule-detail-dialog";
@@ -27,6 +29,7 @@ function generateCalendar(year: number, month: number): (Date | null)[][] {
    * Kalender kita dimulai dari Senin.
    */
   const firstDayIndex = (firstDay.getDay() + 6) % 7;
+
   const weeks: (Date | null)[][] = [];
   let week: (Date | null)[] = [];
 
@@ -64,14 +67,16 @@ function generateCalendar(year: number, month: number): (Date | null)[][] {
 export default function JadwalKelasPage() {
   /*
    * State bulan yang sedang ditampilkan.
-   *
-   * Saat API sudah tersedia, ini bisa diganti
-   * dengan new Date().
    */
   const [currentDate, setCurrentDate] = useState(() => {
     const today = new Date();
+
     return new Date(today.getFullYear(), today.getMonth(), 1);
   });
+
+  /*
+   * Schedule list.
+   */
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,17 +85,27 @@ export default function JadwalKelasPage() {
    * State jadwal yang sedang dipilih.
    */
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(
-    null
+    null,
   );
 
   /*
-   * State untuk membuka / menutup modal detail.
+   * State modal detail jadwal.
    */
   const [openDetail, setOpenDetail] = useState(false);
+
+  /*
+   * State modal tutorial kehadiran.
+   */
+  const [openTutorial, setOpenTutorial] = useState(false);
+
+  /* =========================================================
+   * FETCH SCHEDULES
+   * ========================================================= */
 
   useEffect(() => {
     async function fetchSchedules() {
       const token = localStorage.getItem("access_token");
+
       if (!token) {
         setLoading(false);
         return;
@@ -98,11 +113,13 @@ export default function JadwalKelasPage() {
 
       try {
         const result = await getSchedules(token);
+
         setSchedules(
-          Array.isArray(result.data) ? result.data.map(toSchedule) : []
+          Array.isArray(result.data) ? result.data.map(toSchedule) : [],
         );
       } catch (requestError) {
         console.error(requestError);
+
         setError("Jadwal belum dapat dimuat. Silakan coba lagi.");
       } finally {
         setLoading(false);
@@ -112,6 +129,10 @@ export default function JadwalKelasPage() {
     fetchSchedules();
   }, []);
 
+  /* =========================================================
+   * CALENDAR
+   * ========================================================= */
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
@@ -120,25 +141,27 @@ export default function JadwalKelasPage() {
    */
   const calendar = useMemo(() => generateCalendar(year, month), [year, month]);
 
-  /* =====================================================
+  /* =========================================================
    * MONTH NAVIGATION
-   * ===================================================== */
+   * ========================================================= */
 
   function handlePreviousMonth() {
     setCurrentDate(
-      (previous) => new Date(previous.getFullYear(), previous.getMonth() - 1, 1)
+      (previous) =>
+        new Date(previous.getFullYear(), previous.getMonth() - 1, 1),
     );
   }
 
   function handleNextMonth() {
     setCurrentDate(
-      (previous) => new Date(previous.getFullYear(), previous.getMonth() + 1, 1)
+      (previous) =>
+        new Date(previous.getFullYear(), previous.getMonth() + 1, 1),
     );
   }
 
-  /* =====================================================
+  /* =========================================================
    * SCHEDULE DETAIL
-   * ===================================================== */
+   * ========================================================= */
 
   function handleScheduleClick(schedule: Schedule) {
     setSelectedSchedule(schedule);
@@ -150,9 +173,21 @@ export default function JadwalKelasPage() {
     setSelectedSchedule(null);
   }
 
-  /* =====================================================
+  /* =========================================================
+   * ATTENDANCE TUTORIAL
+   * ========================================================= */
+
+  function handleOpenTutorial() {
+    setOpenTutorial(true);
+  }
+
+  function handleCloseTutorial() {
+    setOpenTutorial(false);
+  }
+
+  /* =========================================================
    * RENDER
-   ===================================================== */
+   * ========================================================= */
 
   return (
     <div className="flex h-[calc(90vh-64px)] flex-col overflow-hidden">
@@ -176,10 +211,14 @@ export default function JadwalKelasPage() {
             </p>
           </div>
 
-          {/* LEGEND */}
+          {/* =================================================
+              LEGEND + TUTORIAL
+          ================================================= */}
+
           <div
             className="
-              flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground
+              flex flex-wrap items-center justify-center gap-3
+              text-xs text-muted-foreground
               sm:justify-end
             "
           >
@@ -194,6 +233,27 @@ export default function JadwalKelasPage() {
               <span className="h-2.5 w-2.5 rounded-full bg-primary" />
               <span>Offline</span>
             </div>
+
+            {/* DIVIDER */}
+            <span className="hidden h-4 w-px bg-border sm:block" />
+
+            {/* TUTORIAL */}
+            <button
+              type="button"
+              onClick={handleOpenTutorial}
+              className="
+                inline-flex items-center gap-1.5 rounded-full
+                border border-primary/20 bg-primary/5
+                px-3 py-1.5 font-medium text-primary
+                transition-colors
+                hover:border-primary/30 hover:bg-primary/10
+                focus:outline-none focus:ring-2 focus:ring-primary/20
+              "
+              title="Lihat tutorial cara mengisi kehadiran"
+            >
+              <PlayCircle className="h-3.5 w-3.5" />
+              <span>Tutorial Absensi</span>
+            </button>
           </div>
         </div>
       </div>
@@ -214,8 +274,8 @@ export default function JadwalKelasPage() {
             {/* MONTH NAVIGATION */}
             <div
               className="
-                flex items-center justify-center border-b bg-background px-3 py-3
-                sm:py-4
+                flex items-center justify-center border-b bg-background
+                px-3 py-3 sm:py-4
               "
             >
               <CalendarNavigation
@@ -228,11 +288,24 @@ export default function JadwalKelasPage() {
 
             {/* CALENDAR */}
             {loading ? (
-              <div className="flex min-h-[420px] items-center justify-center text-sm text-muted-foreground">
+              <div
+                className="
+                  flex min-h-[420px]
+                  items-center justify-center
+                  text-sm text-muted-foreground
+                "
+              >
                 Memuat jadwal...
               </div>
             ) : error ? (
-              <div className="flex min-h-[420px] items-center justify-center px-6 text-center text-sm text-destructive">
+              <div
+                className="
+                  flex min-h-[420px]
+                  items-center justify-center
+                  px-6 text-center
+                  text-sm text-destructive
+                "
+              >
                 {error}
               </div>
             ) : (
@@ -261,6 +334,15 @@ export default function JadwalKelasPage() {
             ? null
             : localStorage.getItem("access_token")
         }
+      />
+
+      {/* =================================================
+          ATTENDANCE TUTORIAL MODAL
+      ================================================= */}
+
+      <AttendanceTutorialDialog
+        open={openTutorial}
+        onClose={handleCloseTutorial}
       />
     </div>
   );

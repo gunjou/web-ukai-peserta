@@ -2,6 +2,7 @@
 
 import {
   CalendarDays,
+  CheckCircle2,
   Clock,
   Loader2,
   MapPin,
@@ -25,7 +26,6 @@ import {
 import type { Schedule } from "@/types/schedule";
 import {
   checkIn,
-  getAttendanceStatus,
   getScheduleDetail,
   toSchedule,
 } from "@/services/schedule.service";
@@ -55,20 +55,6 @@ function isAttendanceTime(schedule: Schedule | null) {
 
   const now = new Date();
 
-  /*
-   * Karena schedule.date berasal dari format:
-   *
-   * YYYY-MM-DD
-   *
-   * dan start_time / end_time:
-   *
-   * HH:mm
-   *
-   * kita gabungkan menjadi waktu lokal browser.
-   *
-   * Browser peserta diasumsikan menggunakan WIB.
-   */
-
   const start = new Date(`${schedule.date}T${schedule.start_time}:00`);
   const end = new Date(`${schedule.date}T${schedule.end_time}:00`);
 
@@ -89,7 +75,7 @@ export default function ScheduleDetailDialog({
   const [error, setError] = useState<string | null>(null);
 
   /* =========================================================
-   * UPDATE ATTENDANCE STATUS
+   * GET SCHEDULE DETAIL
    * ========================================================= */
 
   useEffect(() => {
@@ -106,24 +92,29 @@ export default function ScheduleDetailDialog({
     setAttendanceStatus(null);
     setError(null);
 
-    async function fetchAttendance() {
+    async function fetchDetail() {
       try {
-        const [detailResult, attendanceResult] = await Promise.all([
-          getScheduleDetail(activeSchedule.id, activeToken),
-          getAttendanceStatus(activeSchedule.id, activeToken),
-        ]);
-        setDetail(toSchedule(detailResult.data));
-        setCheckedIn(attendanceResult.data.sudah_absen);
-        setAttendanceStatus(attendanceResult.data.status_kehadiran);
+        const result = await getScheduleDetail(activeSchedule.id, activeToken);
+
+        const scheduleDetail = toSchedule(result.data);
+
+        setDetail(scheduleDetail);
+
+        /*
+         * Status absensi sekarang langsung berasal
+         * dari endpoint detail jadwal.
+         */
+        setCheckedIn(Boolean(result.data.sudah_absen));
+        setAttendanceStatus(result.data.status_kehadiran);
       } catch (requestError) {
         console.error(requestError);
       }
     }
 
-    fetchAttendance();
+    fetchDetail();
 
     function updateAttendanceStatus() {
-      setAttendanceAvailable(isAttendanceTime(schedule));
+      setAttendanceAvailable(isAttendanceTime(activeSchedule));
     }
 
     updateAttendanceStatus();
@@ -143,11 +134,21 @@ export default function ScheduleDetailDialog({
   if (!detail) return null;
 
   const isOnline = detail.meeting_type === "online";
+
+  /*
+   * Peserta dianggap sudah hadir apabila:
+   *
+   * 1. sudah_absen dari endpoint = true
+   * 2. atau status_kehadiran = HADIR
+   *
+   * checkedIn digunakan untuk update UI secara langsung
+   * setelah proses check-in berhasil.
+   */
   const hasAttended =
     checkedIn || attendanceStatus?.trim().toUpperCase() === "HADIR";
 
   async function handleCheckIn() {
-    if (!token || !detail || checkingIn) return;
+    if (!token || !detail || checkingIn || hasAttended) return;
 
     setCheckingIn(true);
     setError(null);
@@ -159,11 +160,12 @@ export default function ScheduleDetailDialog({
             reject(new Error("Lokasi perangkat tidak tersedia."));
             return;
           }
+
           navigator.geolocation.getCurrentPosition(resolve, reject, {
             enableHighAccuracy: true,
             timeout: 10000,
           });
-        }
+        },
       );
 
       await checkIn(
@@ -173,15 +175,22 @@ export default function ScheduleDetailDialog({
           location_accuracy: position.coords.accuracy,
           longitude: position.coords.longitude,
         },
-        token
+        token,
       );
+
+      /*
+       * Langsung ubah state setelah check-in berhasil.
+       * Tombol "Tandai Hadir" akan hilang dan
+       * status "Hadir" akan muncul.
+       */
       setCheckedIn(true);
       setAttendanceStatus("HADIR");
+      setAttendanceAvailable(false);
     } catch (requestError) {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Kehadiran belum dapat ditandai."
+          : "Kehadiran belum dapat ditandai.",
       );
     } finally {
       setCheckingIn(false);
@@ -337,7 +346,12 @@ export default function ScheduleDetailDialog({
 
           {/* ATTENDANCE */}
           <div className="border-t pt-4">
-            {!hasAttended && (
+            {hasAttended ? (
+              <div className="flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold dark:text-green-700 dark:bg-green-50 bg-green-950/30 text-green-400">
+                <CheckCircle2 className="h-4 w-4" />
+                Hadir
+              </div>
+            ) : (
               <button
                 type="button"
                 disabled={!attendanceAvailable || checkingIn}
@@ -358,11 +372,13 @@ export default function ScheduleDetailDialog({
 
             <p className="mt-2 text-center text-[11px] text-muted-foreground">
               {error ||
-                (attendanceStatus
-                  ? `Status kehadiran: ${attendanceStatus}`
-                  : attendanceAvailable
-                  ? "Anda dapat menandai kehadiran sekarang."
-                  : "Tombol akan aktif sesuai waktu pertemuan.")}
+                (hasAttended
+                  ? "Kehadiran Anda sudah tercatat."
+                  : attendanceStatus
+                    ? `Status kehadiran: ${attendanceStatus}`
+                    : attendanceAvailable
+                      ? "Anda dapat menandai kehadiran sekarang."
+                      : "Tombol akan aktif sesuai waktu pertemuan.")}
             </p>
           </div>
         </div>

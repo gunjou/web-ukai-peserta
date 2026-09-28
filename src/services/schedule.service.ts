@@ -2,6 +2,7 @@ import { apiClient } from "@/lib/api-client";
 import { API_ENDPOINTS } from "@/lib/endpoints";
 import type {
   AttendanceStatus,
+  Schedule,
   ScheduleApiItem,
   ScheduleDetail,
 } from "@/types/schedule";
@@ -31,29 +32,41 @@ export interface CheckInPayload {
   longitude: number;
 }
 
-export function toSchedule(item: ScheduleApiItem) {
+export function toSchedule(item: ScheduleApiItem): Schedule {
   return {
     id: item.id_jadwal,
     date: item.tanggal_efektif,
     name: item.nama_kelas,
     start_time: item.waktu_mulai_efektif.slice(0, 5),
     end_time: item.waktu_selesai_efektif.slice(0, 5),
+
     meeting_type:
       item.type_pertemuan.toLowerCase() === "online" ? "online" : "offline",
+
     topik: item.topik,
     catatan: item.catatan,
+
     mentor: item.nickname_mentor || item.nama_mentor,
+
     location:
       item.type_pertemuan.toLowerCase() === "online"
         ? "Pertemuan online"
         : "Offline",
+
     id_paketkelas: item.id_paketkelas,
     id_mentor: item.id_mentor,
     nickname_mentor: item.nickname_mentor,
+
     original_date: item.tanggal,
     original_start_time: item.waktu_mulai,
     original_end_time: item.waktu_selesai,
-  } as const;
+
+    // Attendance
+    id_absensi_peserta: item.id_absensi_peserta,
+    status_kehadiran: item.status_kehadiran,
+    check_in_at: item.check_in_at,
+    sudah_absen: item.sudah_absen,
+  };
 }
 
 export async function getSchedules(token: string) {
@@ -65,14 +78,14 @@ export async function getSchedules(token: string) {
 export async function getScheduleDetail(scheduleId: number, token: string) {
   return apiClient.get<ScheduleDetailResponse>(
     API_ENDPOINTS.SCHEDULE.DETAIL(scheduleId),
-    { token }
+    { token },
   );
 }
 
 export async function getAttendanceStatus(scheduleId: number, token: string) {
   return apiClient.get<AttendanceResponse>(
     API_ENDPOINTS.SCHEDULE.ATTENDANCE(scheduleId),
-    { token }
+    { token },
   );
 }
 
@@ -80,6 +93,6 @@ export async function checkIn(payload: CheckInPayload, token: string) {
   return apiClient.post<{ status: string; message: string }>(
     API_ENDPOINTS.SCHEDULE.CHECK_IN,
     payload,
-    { token }
+    { token },
   );
 }
