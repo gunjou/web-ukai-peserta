@@ -27,9 +27,9 @@ interface AttendanceResponse {
 
 export interface CheckInPayload {
   id_jadwal: number;
-  latitude: number;
-  location_accuracy: number;
-  longitude: number;
+  latitude?: number;
+  location_accuracy?: number;
+  longitude?: number;
 }
 
 export function toSchedule(item: ScheduleApiItem): Schedule {

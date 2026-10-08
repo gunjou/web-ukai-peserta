@@ -83,7 +83,7 @@ export default function ScheduleItem({ schedule, onClick }: Props) {
           <Clock className="h-2.5 w-2.5 shrink-0" />
 
           <span>
-            {schedule.start_time} - {schedule.end_time}
+            {schedule.start_time} - {schedule.end_time} WIB
           </span>
         </div>
 

@@ -30,6 +30,13 @@ import {
   toSchedule,
 } from "@/services/schedule.service";
 
+interface CheckInPayload {
+  id_jadwal: number;
+  latitude?: number;
+  longitude?: number;
+  location_accuracy?: number;
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -38,12 +45,57 @@ interface Props {
 }
 
 function formatDate(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+
   return new Intl.DateTimeFormat("id-ID", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(new Date(date));
+    timeZone: "Asia/Jakarta",
+  }).format(new Date(year, month - 1, day));
+}
+
+/* =========================================================
+ * WIB TIME
+ * ========================================================= */
+
+function getWibNow() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+
+  const values: Record<string, string> = {};
+
+  parts.forEach((part) => {
+    if (part.type !== "literal") {
+      values[part.type] = part.value;
+    }
+  });
+
+  return new Date(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second),
+  );
+}
+
+function createWibDate(date: string, time: string) {
+  const [year, month, day] = date.split("-").map(Number);
+
+  const [hour = 0, minute = 0, second = 0] = time.split(":").map(Number);
+
+  return new Date(year, month - 1, day, hour, minute, second);
 }
 
 /* =========================================================
@@ -53,12 +105,76 @@ function formatDate(date: string) {
 function isAttendanceTime(schedule: Schedule | null) {
   if (!schedule) return false;
 
-  const now = new Date();
-
-  const start = new Date(`${schedule.date}T${schedule.start_time}:00`);
-  const end = new Date(`${schedule.date}T${schedule.end_time}:00`);
+  const now = getWibNow();
+  const start = createWibDate(schedule.date, schedule.start_time);
+  const end = createWibDate(schedule.date, schedule.end_time);
 
   return now >= start && now <= end;
+}
+
+function getCurrentPosition(): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Lokasi perangkat tidak tersedia."));
+      return;
+    }
+
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    const requestLocation = () => {
+      attempts += 1;
+
+      navigator.geolocation.getCurrentPosition(
+        resolve,
+        (error) => {
+          console.error(`LOCATION ERROR - attempt ${attempts}:`, error);
+
+          /*
+           * kCLErrorLocationUnknown biasanya bersifat
+           * sementara. Coba lagi beberapa kali.
+           *
+           * GeolocationPositionError code:
+           * 1 = PERMISSION_DENIED
+           * 2 = POSITION_UNAVAILABLE
+           * 3 = TIMEOUT
+           */
+
+          if (error.code === 2 && attempts < maxAttempts) {
+            setTimeout(requestLocation, 1500);
+            return;
+          }
+
+          if (error.code === 3 && attempts < maxAttempts) {
+            setTimeout(requestLocation, 1000);
+            return;
+          }
+
+          if (error.code === 1) {
+            reject(
+              new Error(
+                "Izin lokasi ditolak. Silakan izinkan akses lokasi pada browser.",
+              ),
+            );
+            return;
+          }
+
+          reject(
+            new Error(
+              "Lokasi perangkat belum tersedia. Pastikan GPS/lokasi aktif lalu coba lagi.",
+            ),
+          );
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        },
+      );
+    };
+
+    requestLocation();
+  });
 }
 
 export default function ScheduleDetailDialog({
@@ -153,40 +269,37 @@ export default function ScheduleDetailDialog({
     setCheckingIn(true);
     setError(null);
 
+    console.log("Attempting to check in for schedule:", detail);
+
     try {
-      const position = await new Promise<GeolocationPosition>(
-        (resolve, reject) => {
-          if (!navigator.geolocation) {
-            reject(new Error("Lokasi perangkat tidak tersedia."));
-            return;
-          }
+      const isOnline = detail.meeting_type?.trim().toLowerCase() === "online";
 
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-          });
-        },
-      );
-
-      await checkIn(
-        {
-          id_jadwal: detail.id,
-          latitude: position.coords.latitude,
-          location_accuracy: position.coords.accuracy,
-          longitude: position.coords.longitude,
-        },
-        token,
-      );
+      const payload: CheckInPayload = {
+        id_jadwal: detail.id,
+      };
 
       /*
-       * Langsung ubah state setelah check-in berhasil.
-       * Tombol "Tandai Hadir" akan hilang dan
-       * status "Hadir" akan muncul.
+       * OFFLINE
+       * Wajib mengambil lokasi.
        */
+      if (!isOnline) {
+        const position = await getCurrentPosition();
+
+        payload.latitude = position.coords.latitude;
+        payload.longitude = position.coords.longitude;
+        payload.location_accuracy = position.coords.accuracy;
+      }
+
+      console.log("CHECK-IN PAYLOAD:", payload);
+
+      await checkIn(payload, token);
+
       setCheckedIn(true);
       setAttendanceStatus("HADIR");
       setAttendanceAvailable(false);
     } catch (requestError) {
+      console.error("CHECK-IN ERROR:", requestError);
+
       setError(
         requestError instanceof Error
           ? requestError.message
