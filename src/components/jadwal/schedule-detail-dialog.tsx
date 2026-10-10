@@ -44,16 +44,29 @@ interface Props {
   token: string | null;
 }
 
+// function formatDate(date: string) {
+//   const [year, month, day] = date.split("-").map(Number);
+
+//   return new Intl.DateTimeFormat("id-ID", {
+//     weekday: "long",
+//     day: "numeric",
+//     month: "long",
+//     year: "numeric",
+//     timeZone: "Asia/Jakarta",
+//   }).format(new Date(year, month - 1, day));
+// }
+
 function formatDate(date: string) {
   const [year, month, day] = date.split("-").map(Number);
 
-  return new Intl.DateTimeFormat("id-ID", {
+  const formatter = new Intl.DateTimeFormat("id-ID", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
-    timeZone: "Asia/Jakarta",
-  }).format(new Date(year, month - 1, day));
+  });
+
+  return formatter.format(new Date(Date.UTC(year, month - 1, day)));
 }
 
 /* =========================================================
