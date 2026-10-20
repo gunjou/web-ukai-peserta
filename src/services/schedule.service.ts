@@ -32,6 +32,12 @@ export interface CheckInPayload {
   longitude?: number;
 }
 
+export interface AbsensiSusulanPayload {
+  id_jadwal: number;
+  file: File;
+  alasan_absensi_susulan?: string;
+}
+
 export function toSchedule(item: ScheduleApiItem): Schedule {
   return {
     id: item.id_jadwal,
@@ -66,6 +72,13 @@ export function toSchedule(item: ScheduleApiItem): Schedule {
     status_kehadiran: item.status_kehadiran,
     check_in_at: item.check_in_at,
     sudah_absen: item.sudah_absen,
+
+    // Late attendance
+    jenis_absensi: item.jenis_absensi ?? null,
+    bukti_kehadiran_url: item.bukti_kehadiran_url ?? null,
+    status_verifikasi: item.status_verifikasi ?? null,
+    alasan_absensi_susulan: item.alasan_absensi_susulan ?? null,
+    kehadiran_disahkan: item.kehadiran_disahkan ?? false,
   };
 }
 
@@ -93,6 +106,29 @@ export async function checkIn(payload: CheckInPayload, token: string) {
   return apiClient.post<{ status: string; message: string }>(
     API_ENDPOINTS.SCHEDULE.CHECK_IN,
     payload,
+    { token },
+  );
+}
+
+export async function submitAbsensiSusulan(
+  payload: AbsensiSusulanPayload,
+  token: string,
+) {
+  const formData = new FormData();
+
+  formData.append("id_jadwal", String(payload.id_jadwal));
+  formData.append("file", payload.file, payload.file.name);
+
+  if (payload.alasan_absensi_susulan?.trim()) {
+    formData.append(
+      "alasan_absensi_susulan",
+      payload.alasan_absensi_susulan.trim(),
+    );
+  }
+
+  return apiClient.post<{ status: string; message: string }>(
+    API_ENDPOINTS.SCHEDULE.ABSENSI_SUSULAN,
+    formData,
     { token },
   );
 }

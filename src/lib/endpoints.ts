@@ -28,6 +28,7 @@ export const API_ENDPOINTS = {
     LIST: "/api/v2/jadwal",
     DETAIL: (scheduleId: number) => `/api/v2/jadwal/${scheduleId}`,
     CHECK_IN: "/api/v2/absensi/peserta/me/check-in",
+    ABSENSI_SUSULAN: "/api/v2/absensi/peserta/me/absensi-susulan",
     ATTENDANCE: (scheduleId: number) =>
       `/api/v2/absensi/peserta/me/${scheduleId}`,
   },

@@ -12,7 +12,6 @@ import {
   Video,
   X,
 } from "lucide-react";
-
 import { useEffect, useState } from "react";
 
 import {
@@ -22,20 +21,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-import type { Schedule } from "@/types/schedule";
 import {
   checkIn,
   getScheduleDetail,
   toSchedule,
 } from "@/services/schedule.service";
-
-interface CheckInPayload {
-  id_jadwal: number;
-  latitude?: number;
-  longitude?: number;
-  location_accuracy?: number;
-}
+import type { Schedule } from "@/types/schedule";
+import LateAttendanceDialog from "./late-attendance-dialog";
 
 interface Props {
   open: boolean;
@@ -44,35 +36,30 @@ interface Props {
   token: string | null;
 }
 
-// function formatDate(date: string) {
-//   const [year, month, day] = date.split("-").map(Number);
-
-//   return new Intl.DateTimeFormat("id-ID", {
-//     weekday: "long",
-//     day: "numeric",
-//     month: "long",
-//     year: "numeric",
-//     timeZone: "Asia/Jakarta",
-//   }).format(new Date(year, month - 1, day));
-// }
+interface CheckInPayload {
+  id_jadwal: number;
+  latitude?: number;
+  longitude?: number;
+  location_accuracy?: number;
+}
 
 function formatDate(date: string) {
   const [year, month, day] = date.split("-").map(Number);
 
-  const formatter = new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat("id-ID", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
-  });
-
-  return formatter.format(new Date(Date.UTC(year, month - 1, day)));
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
 }
 
-/* =========================================================
- * WIB TIME
- * ========================================================= */
-
+/**
+ * Mengambil waktu sekarang sebagai komponen waktu WIB.
+ * Digunakan bersama createWibDate agar perbandingan konsisten
+ * meskipun zona waktu perangkat pengguna berbeda.
+ */
 function getWibNow() {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Jakarta",
@@ -88,9 +75,7 @@ function getWibNow() {
   const values: Record<string, string> = {};
 
   parts.forEach((part) => {
-    if (part.type !== "literal") {
-      values[part.type] = part.value;
-    }
+    if (part.type !== "literal") values[part.type] = part.value;
   });
 
   return new Date(
@@ -103,17 +88,15 @@ function getWibNow() {
   );
 }
 
+/**
+ * Membentuk tanggal dan waktu jadwal sebagai komponen WIB.
+ */
 function createWibDate(date: string, time: string) {
   const [year, month, day] = date.split("-").map(Number);
-
   const [hour = 0, minute = 0, second = 0] = time.split(":").map(Number);
 
   return new Date(year, month - 1, day, hour, minute, second);
 }
-
-/* =========================================================
- * CHECK ATTENDANCE TIME
- * ========================================================= */
 
 function isAttendanceTime(schedule: Schedule | null) {
   if (!schedule) return false;
@@ -123,6 +106,15 @@ function isAttendanceTime(schedule: Schedule | null) {
   const end = createWibDate(schedule.date, schedule.end_time);
 
   return now >= start && now <= end;
+}
+
+function isScheduleFinished(schedule: Schedule | null) {
+  if (!schedule) return false;
+
+  return (
+    getWibNow().getTime() >
+    createWibDate(schedule.date, schedule.end_time).getTime()
+  );
 }
 
 function getCurrentPosition(): Promise<GeolocationPosition> {
@@ -141,32 +133,18 @@ function getCurrentPosition(): Promise<GeolocationPosition> {
       navigator.geolocation.getCurrentPosition(
         resolve,
         (error) => {
-          console.error(`LOCATION ERROR - attempt ${attempts}:`, error);
-
-          /*
-           * kCLErrorLocationUnknown biasanya bersifat
-           * sementara. Coba lagi beberapa kali.
-           *
-           * GeolocationPositionError code:
-           * 1 = PERMISSION_DENIED
-           * 2 = POSITION_UNAVAILABLE
-           * 3 = TIMEOUT
-           */
-
-          if (error.code === 2 && attempts < maxAttempts) {
-            setTimeout(requestLocation, 1500);
-            return;
-          }
-
-          if (error.code === 3 && attempts < maxAttempts) {
-            setTimeout(requestLocation, 1000);
+          if (
+            (error.code === 2 || error.code === 3) &&
+            attempts < maxAttempts
+          ) {
+            setTimeout(requestLocation, error.code === 2 ? 1500 : 1000);
             return;
           }
 
           if (error.code === 1) {
             reject(
               new Error(
-                "Izin lokasi ditolak. Silakan izinkan akses lokasi pada browser.",
+                "Izin lokasi ditolak. Izinkan akses lokasi pada browser.",
               ),
             );
             return;
@@ -174,20 +152,29 @@ function getCurrentPosition(): Promise<GeolocationPosition> {
 
           reject(
             new Error(
-              "Lokasi perangkat belum tersedia. Pastikan GPS/lokasi aktif lalu coba lagi.",
+              "Lokasi belum tersedia. Pastikan GPS aktif lalu coba lagi.",
             ),
           );
         },
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0,
-        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
       );
     };
 
     requestLocation();
   });
+}
+
+function getVerificationLabel(status?: string | null) {
+  switch (status) {
+    case "menunggu_verifikasi":
+      return "Menunggu verifikasi";
+    case "disetujui":
+      return "Absensi susulan disetujui";
+    case "ditolak":
+      return "Absensi susulan ditolak";
+    default:
+      return null;
+  }
 }
 
 export default function ScheduleDetailDialog({
@@ -196,66 +183,76 @@ export default function ScheduleDetailDialog({
   schedule,
   token,
 }: Props) {
+  const [detail, setDetail] = useState<Schedule | null>(schedule);
+  const [loadingDetail, setLoadingDetail] = useState(true);
   const [attendanceAvailable, setAttendanceAvailable] = useState(false);
   const [checkedIn, setCheckedIn] = useState(false);
   const [attendanceStatus, setAttendanceStatus] = useState<string | null>(null);
   const [checkingIn, setCheckingIn] = useState(false);
-  const [detail, setDetail] = useState<Schedule | null>(schedule);
-  const [error, setError] = useState<string | null>(null);
 
-  /* =========================================================
-   * GET SCHEDULE DETAIL
-   * ========================================================= */
+  const [lateDialogOpen, setLateDialogOpen] = useState(false);
+
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [, setClockTick] = useState(0);
 
   useEffect(() => {
     if (!schedule || !open || !token) {
       setAttendanceAvailable(false);
+      setLoadingDetail(false);
       return;
     }
 
-    const activeSchedule = schedule;
-    const activeToken = token;
+    const currentSchedule = schedule;
+    const currentToken = token;
 
-    setDetail(activeSchedule);
-    setCheckedIn(false);
-    setAttendanceStatus(null);
+    let cancelled = false;
+
+    setLoadingDetail(true);
+    setDetail(currentSchedule);
+    setCheckedIn(Boolean(currentSchedule.sudah_absen));
+    setAttendanceStatus(currentSchedule.status_kehadiran ?? null);
     setError(null);
+    setSuccessMessage(null);
 
     async function fetchDetail() {
       try {
-        const result = await getScheduleDetail(activeSchedule.id, activeToken);
+        const result = await getScheduleDetail(
+          currentSchedule.id,
+          currentToken,
+        );
 
-        const scheduleDetail = toSchedule(result.data);
+        if (cancelled) return;
 
-        setDetail(scheduleDetail);
+        const mapped = toSchedule(result.data);
 
-        /*
-         * Status absensi sekarang langsung berasal
-         * dari endpoint detail jadwal.
-         */
-        setCheckedIn(Boolean(result.data.sudah_absen));
-        setAttendanceStatus(result.data.status_kehadiran);
+        setDetail(mapped);
+        setCheckedIn(Boolean(mapped.sudah_absen));
+        setAttendanceStatus(mapped.status_kehadiran ?? null);
       } catch (requestError) {
-        console.error(requestError);
+        if (cancelled) return;
+
+        console.error("Gagal mengambil detail jadwal:", requestError);
+      } finally {
+        if (!cancelled) {
+          setLoadingDetail(false);
+        }
       }
     }
 
-    fetchDetail();
+    void fetchDetail();
 
-    function updateAttendanceStatus() {
-      setAttendanceAvailable(isAttendanceTime(activeSchedule));
-    }
+    const updateAttendanceTime = () => {
+      setClockTick((tick) => tick + 1);
+      setAttendanceAvailable(isAttendanceTime(currentSchedule));
+    };
 
-    updateAttendanceStatus();
+    updateAttendanceTime();
 
-    /*
-     * Update setiap detik supaya tombol otomatis
-     * aktif ketika waktu mulai tercapai dan
-     * kembali disabled ketika waktu selesai.
-     */
-    const interval = setInterval(updateAttendanceStatus, 1000);
+    const interval = setInterval(updateAttendanceTime, 1000);
 
     return () => {
+      cancelled = true;
       clearInterval(interval);
     };
   }, [schedule, open, token]);
@@ -263,39 +260,40 @@ export default function ScheduleDetailDialog({
   if (!detail) return null;
 
   const isOnline = detail.meeting_type === "online";
+  const verificationStatus = detail.status_verifikasi;
+  const verificationLabel = getVerificationLabel(verificationStatus);
+  const isLateSubmission = detail.jenis_absensi === "susulan";
+  const isPending =
+    isLateSubmission && verificationStatus === "menunggu_verifikasi";
+  const isApproved = verificationStatus === "disetujui";
+  const isRejected = isLateSubmission && verificationStatus === "ditolak";
 
-  /*
-   * Peserta dianggap sudah hadir apabila:
-   *
-   * 1. sudah_absen dari endpoint = true
-   * 2. atau status_kehadiran = HADIR
-   *
-   * checkedIn digunakan untuk update UI secara langsung
-   * setelah proses check-in berhasil.
-   */
-  const hasAttended =
-    checkedIn || attendanceStatus?.trim().toUpperCase() === "HADIR";
+  const hasAttended = isLateSubmission
+    ? isApproved || detail.kehadiran_disahkan === true
+    : Boolean(
+        checkedIn ||
+        attendanceStatus?.trim().toUpperCase() === "HADIR" ||
+        detail.kehadiran_disahkan,
+      );
+
+  const hasAttendanceRecord =
+    Boolean(detail.sudah_absen) || detail.id_absensi_peserta != null;
+
+  const canSubmitLateAttendance =
+    isScheduleFinished(detail) && !hasAttendanceRecord;
 
   async function handleCheckIn() {
-    if (!token || !detail || checkingIn || hasAttended) return;
+    if (!token || !detail || checkingIn || hasAttendanceRecord) return;
 
     setCheckingIn(true);
     setError(null);
-
-    console.log("Attempting to check in for schedule:", detail);
+    setSuccessMessage(null);
 
     try {
-      const isOnline = detail.meeting_type?.trim().toLowerCase() === "online";
+      const online = detail.meeting_type.trim().toLowerCase() === "online";
+      const payload: CheckInPayload = { id_jadwal: detail.id };
 
-      const payload: CheckInPayload = {
-        id_jadwal: detail.id,
-      };
-
-      /*
-       * OFFLINE
-       * Wajib mengambil lokasi.
-       */
-      if (!isOnline) {
+      if (!online) {
         const position = await getCurrentPosition();
 
         payload.latitude = position.coords.latitude;
@@ -303,16 +301,27 @@ export default function ScheduleDetailDialog({
         payload.location_accuracy = position.coords.accuracy;
       }
 
-      console.log("CHECK-IN PAYLOAD:", payload);
-
       await checkIn(payload, token);
 
       setCheckedIn(true);
       setAttendanceStatus("HADIR");
-      setAttendanceAvailable(false);
-    } catch (requestError) {
-      console.error("CHECK-IN ERROR:", requestError);
+      setDetail((current) =>
+        current
+          ? {
+              ...current,
+              sudah_absen: true,
+              status_kehadiran: "HADIR",
+              jenis_absensi: "tepat_waktu",
+              status_verifikasi: "tidak_perlu_verifikasi",
+              kehadiran_disahkan: true,
+            }
+          : current,
+      );
 
+      setAttendanceAvailable(false);
+      setSuccessMessage("Kehadiran berhasil dicatat.");
+    } catch (requestError) {
+      console.error("Gagal check-in:", requestError);
       setError(
         requestError instanceof Error
           ? requestError.message
@@ -324,191 +333,237 @@ export default function ScheduleDetailDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md overflow-hidden rounded-2xl p-0 [&>button]:hidden">
-        {/* HEADER */}
-        <DialogHeader className="border-b bg-muted/30 px-6 py-5">
-          {/* CUSTOM CLOSE */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="
-              absolute right-4 top-4 z-10 flex h-8 w-8 cursor-pointer items-center justify-center
-              rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground
-            "
-            aria-label="Tutup"
-          >
-            <X className="h-5 w-5" />
-          </button>
-
-          <DialogTitle className="pr-8 text-lg font-semibold">
-            Detail Pertemuan
-          </DialogTitle>
-
-          <DialogDescription className="sr-only">
-            Detail jadwal kelas dan informasi kehadiran peserta.
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* CONTENT */}
-        <div className="space-y-5 px-6 py-5">
-          {/* TITLE */}
-          <div>
-            <h2 className="text-base font-semibold">{detail.name}</h2>
-
-            <div
-              className={`
-                mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium
-                ${
-                  isOnline
-                    ? "bg-accent-blue/10 text-accent-blue"
-                    : "bg-muted text-primary"
-                }
-              `}
+    <>
+      <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
+        <DialogContent className="max-w-md overflow-hidden rounded-2xl p-0 [&>button]:hidden">
+          <DialogHeader className="border-b bg-muted/30 px-6 py-5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              aria-label="Tutup"
             >
-              {isOnline ? (
-                <Video className="h-3.5 w-3.5" />
+              <X className="h-5 w-5" />
+            </button>
+            <DialogTitle className="pr-8 text-lg font-semibold">
+              Detail Pertemuan
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Detail jadwal kelas dan informasi kehadiran peserta.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 px-6 py-5">
+            <div>
+              <h2 className="text-base font-semibold">{detail.name}</h2>
+              <div
+                className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${isOnline ? "bg-accent-blue/10 text-accent-blue" : "bg-muted text-primary"}`}
+              >
+                {isOnline ? (
+                  <Video className="h-3.5 w-3.5" />
+                ) : (
+                  <MapPin className="h-3.5 w-3.5" />
+                )}
+                {isOnline ? "Pertemuan Online" : "Pertemuan Offline"}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                  <CalendarDays className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Tanggal</p>
+                  <p className="mt-0.5 text-sm font-medium">
+                    {formatDate(detail.date)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                  <Clock className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Waktu</p>
+                  <p className="mt-0.5 text-sm font-medium">
+                    {detail.start_time} - {detail.end_time} WIB
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                  <User className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Mentor</p>
+                  <p className="mt-0.5 text-sm font-medium">
+                    {detail.mentor || "Belum ditentukan"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                  {isOnline ? (
+                    <Video className="h-4 w-4 text-primary" />
+                  ) : (
+                    <MapPin className="h-4 w-4 text-primary" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">
+                    {isOnline ? "Platform" : "Lokasi"}
+                  </p>
+                  <p className="mt-0.5 truncate text-sm font-medium">
+                    {detail.location || "Belum ditentukan"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                  <NotebookPen className="h-4 w-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Topik</p>
+                  <p className="mt-0.5 whitespace-pre-wrap text-sm font-medium">
+                    {detail.topik || "Belum tersedia"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                  <StickyNote className="h-4 w-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Catatan</p>
+                  <p className="mt-0.5 whitespace-pre-wrap text-sm font-medium">
+                    {detail.catatan || "Tidak ada catatan"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 border-t pt-4">
+              {loadingDetail ? (
+                <div
+                  className="flex items-center justify-center gap-2"
+                  role="status"
+                >
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {/* Memuat status kehadiran... */}
+                </div>
+              ) : hasAttended ? (
+                <div className="flex items-center justify-center gap-2 rounded-xl dark:bg-green-100 px-4 py-2.5 text-sm font-semibold dark:text-green-800 transition-colors bg-green-900/40 text-green-300">
+                  <CheckCircle2 className="h-4 w-4" />
+                  {isLateSubmission ? "Absensi susulan disetujui" : "Hadir"}
+                </div>
+              ) : isPending ? (
+                <div className="flex items-center justify-center gap-2 rounded-xl dark:bg-amber-100 px-4 py-2.5 text-sm font-semibold dark:text-amber-800 transition-colors bg-amber-900/40 text-amber-300">
+                  <Clock className="h-4 w-4" />
+                  Menunggu verifikasi absensi susulan
+                </div>
+              ) : isRejected ? (
+                <div className="rounded-xl dark:bg-red-100 px-4 py-3 text-sm font-medium dark:text-red-800 transition-colors bg-red-900/40 text-red-300">
+                  Pengajuan absensi susulan ditolak. Silakan hubungi admin untuk
+                  informasi lebih lanjut.
+                </div>
+              ) : canSubmitLateAttendance ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    setLateDialogOpen(true);
+                  }}
+                  className="mx-auto flex items-center justify-center gap-2 rounded-xl dark:bg-amber-600 px-5 py-2.5 text-sm font-semibold dark:text-white transition-colors dark:hover:bg-amber-700 bg-amber-500 text-[#1f1712] hover:bg-amber-400"
+                >
+                  <Clock className="h-4 w-4" />
+                  Ajukan Absensi Susulan
+                </button>
               ) : (
-                <MapPin className="h-3.5 w-3.5" />
+                <button
+                  type="button"
+                  disabled={
+                    !attendanceAvailable || checkingIn || hasAttendanceRecord
+                  }
+                  onClick={handleCheckIn}
+                  className="mx-auto flex w-auto items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {checkingIn ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Tandai Hadir"
+                  )}
+                </button>
               )}
 
-              {isOnline ? "Pertemuan Online" : "Pertemuan Offline"}
-            </div>
-          </div>
+              {detail.bukti_kehadiran_url && (
+                <a
+                  href={detail.bukti_kehadiran_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block text-center text-sm text-primary underline underline-offset-4"
+                >
+                  Lihat bukti kehadiran
+                </a>
+              )}
 
-          {/* DETAILS */}
-          <div className="space-y-3">
-            {/* DATE */}
-            <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                <CalendarDays className="h-4 w-4 text-primary" />
-              </div>
-
-              <div>
-                <p className="text-xs text-muted-foreground">Tanggal</p>
-                <p className="mt-0.5 text-sm font-medium">
-                  {formatDate(detail.date)}
-                </p>
-              </div>
-            </div>
-
-            {/* TIME */}
-            <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                <Clock className="h-4 w-4 text-primary" />
-              </div>
-
-              <div>
-                <p className="text-xs text-muted-foreground">Waktu</p>
-                <p className="mt-0.5 text-sm font-medium">
-                  {detail.start_time} - {detail.end_time} WIB
-                </p>
-              </div>
-            </div>
-
-            {/* MENTOR */}
-            <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                <User className="h-4 w-4 text-primary" />
-              </div>
-
-              <div>
-                <p className="text-xs text-muted-foreground">Mentor</p>
-                <p className="mt-0.5 text-sm font-medium">
-                  {detail.mentor || "Belum ditentukan"}
-                </p>
-              </div>
-            </div>
-
-            {/* LOCATION */}
-            <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                {isOnline ? (
-                  <Video className="h-4 w-4 text-primary" />
-                ) : (
-                  <MapPin className="h-4 w-4 text-primary" />
-                )}
-              </div>
-
-              <div className="min-w-0">
+              {detail.alasan_absensi_susulan && (
                 <p className="text-xs text-muted-foreground">
-                  {isOnline ? "Platform" : "Lokasi"}
+                  Alasan pengajuan: {detail.alasan_absensi_susulan}
                 </p>
+              )}
 
-                <p className="mt-0.5 truncate text-sm font-medium">
-                  {detail.location || "Belum ditentukan"}
-                </p>
-              </div>
-            </div>
-
-            {/* TOPIC */}
-            <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                <NotebookPen className="h-4 w-4 text-primary" />
-              </div>
-
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Topik</p>
-                <p className="mt-0.5 whitespace-pre-wrap text-sm font-medium">
-                  {detail.topik || "Belum tersedia"}
-                </p>
-              </div>
-            </div>
-
-            {/* NOTES */}
-            <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                <StickyNote className="h-4 w-4 text-primary" />
-              </div>
-
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Catatan</p>
-                <p className="mt-0.5 whitespace-pre-wrap text-sm font-medium">
-                  {detail.catatan || "Tidak ada catatan"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* ATTENDANCE */}
-          <div className="border-t pt-4">
-            {hasAttended ? (
-              <div className="flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold dark:text-green-700 dark:bg-green-50 bg-green-950/30 text-green-400">
-                <CheckCircle2 className="h-4 w-4" />
-                Hadir
-              </div>
-            ) : (
-              <button
-                type="button"
-                disabled={!attendanceAvailable || checkingIn}
-                onClick={handleCheckIn}
-                className="
-                  mx-auto block w-auto rounded-xl bg-primary px-5 py-2
-                  text-sm font-semibold text-primary-foreground transition hover:opacity-90
-                  disabled:cursor-not-allowed disabled:opacity-40
-                "
-              >
-                {checkingIn ? (
-                  <Loader2 className="mx-auto h-4 w-4 animate-spin" />
-                ) : (
-                  "Tandai Hadir"
-                )}
-              </button>
-            )}
-
-            <p className="mt-2 text-center text-[11px] text-muted-foreground">
-              {error ||
-                (hasAttended
-                  ? "Kehadiran Anda sudah tercatat."
-                  : attendanceStatus
-                    ? `Status kehadiran: ${attendanceStatus}`
+              <p className="text-center text-[11px] text-muted-foreground">
+                {error ||
+                  successMessage ||
+                  verificationLabel ||
+                  (hasAttended
+                    ? "Kehadiran Anda sudah tercatat."
                     : attendanceAvailable
                       ? "Anda dapat menandai kehadiran sekarang."
-                      : "Tombol akan aktif sesuai waktu pertemuan.")}
-            </p>
+                      : canSubmitLateAttendance
+                        ? "Jadwal telah berakhir dan absensi belum tercatat."
+                        : "Tombol absensi tersedia sesuai waktu dan status jadwal.")}
+              </p>
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <LateAttendanceDialog
+        open={lateDialogOpen}
+        onClose={() => setLateDialogOpen(false)}
+        scheduleId={detail.id}
+        token={token ?? ""}
+        onSuccess={() => {
+          setDetail((current) =>
+            current
+              ? {
+                  ...current,
+                  sudah_absen: true,
+                  jenis_absensi: "susulan",
+                  status_kehadiran: "HADIR",
+                  status_verifikasi: "menunggu_verifikasi",
+                  kehadiran_disahkan: false,
+                }
+              : current,
+          );
+
+          setCheckedIn(false);
+          setAttendanceStatus(null);
+
+          setSuccessMessage(
+            "Pengajuan absensi susulan berhasil dikirim dan menunggu verifikasi.",
+          );
+
+          setError(null);
+        }}
+      />
+    </>
   );
 }

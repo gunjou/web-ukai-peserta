@@ -8,15 +8,21 @@ interface RequestOptions extends RequestInit {
 
 async function request<T>(
   endpoint: string,
-  options: RequestOptions = {}
+  options: RequestOptions = {},
 ): Promise<T> {
   const { token, headers, ...restOptions } = options;
+
+  const isFormData =
+    typeof FormData !== "undefined" && restOptions.body instanceof FormData;
 
   const response = await fetch(`${BASE_URL}${endpoint}`, {
     ...restOptions,
 
     headers: {
-      "Content-Type": "application/json",
+      // FormData harus membiarkan browser mengatur Content-Type dan boundary.
+      ...(!isFormData && {
+        "Content-Type": "application/json",
+      }),
 
       ...(token && {
         Authorization: `Bearer ${token}`,
@@ -29,13 +35,10 @@ async function request<T>(
   if (!response.ok) {
     const error = await response.json().catch(() => null);
 
-    // HANDLE SESSION INVALID — pakai optional chaining penuh, jangan sampai
-    // .includes() dipanggil di atas undefined
     if (error?.message?.includes("session invalid")) {
       handleSessionInvalid();
     }
 
-    // Sertakan status code biar gampang di-debug dari console
     throw new Error(error?.message || `Terjadi kesalahan (${response.status})`);
   }
 
@@ -52,7 +55,12 @@ export const apiClient = {
   post: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, {
       method: "POST",
-      body: JSON.stringify(body),
+      body:
+        typeof FormData !== "undefined" && body instanceof FormData
+          ? body
+          : body !== undefined
+            ? JSON.stringify(body)
+            : undefined,
       ...options,
     }),
 

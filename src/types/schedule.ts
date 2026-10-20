@@ -1,5 +1,13 @@
 export type MeetingType = "online" | "offline";
 
+export type JenisAbsensi = "tepat_waktu" | "susulan";
+
+export type StatusVerifikasi =
+  | "tidak_perlu_verifikasi"
+  | "menunggu_verifikasi"
+  | "disetujui"
+  | "ditolak";
+
 export interface Schedule {
   id: number;
   date: string;
@@ -23,6 +31,13 @@ export interface Schedule {
   status_kehadiran?: string | null;
   check_in_at?: string | null;
   sudah_absen?: boolean;
+
+  // Late attendance
+  jenis_absensi?: JenisAbsensi | null;
+  bukti_kehadiran_url?: string | null;
+  status_verifikasi?: StatusVerifikasi | null;
+  alasan_absensi_susulan?: string | null;
+  kehadiran_disahkan?: boolean;
 }
 
 export interface ScheduleApiItem {
@@ -50,11 +65,18 @@ export interface ScheduleApiItem {
   topik?: string | null;
   catatan?: string | null;
 
-  // Attendance dari endpoint detail
+  // Attendance
   id_absensi_peserta: number | null;
   status_kehadiran: string | null;
   check_in_at: string | null;
   sudah_absen: boolean;
+
+  // Late attendance
+  jenis_absensi?: JenisAbsensi | null;
+  bukti_kehadiran_url?: string | null;
+  status_verifikasi?: StatusVerifikasi | null;
+  alasan_absensi_susulan?: string | null;
+  kehadiran_disahkan?: boolean;
 }
 
 export type ScheduleDetail = ScheduleApiItem;
@@ -65,4 +87,11 @@ export interface AttendanceStatus {
   status_kehadiran: string | null;
   check_in_at: string | null;
   sudah_absen: boolean;
+
+  // Late attendance
+  jenis_absensi?: JenisAbsensi | null;
+  bukti_kehadiran_url?: string | null;
+  status_verifikasi?: StatusVerifikasi | null;
+  alasan_absensi_susulan?: string | null;
+  kehadiran_disahkan?: boolean;
 }
