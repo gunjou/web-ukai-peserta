@@ -44,6 +44,7 @@ export interface ScheduleApiItem {
   id_jadwal: number;
   id_paketkelas: number;
   nama_kelas: string;
+  nama_kelompok: string;
   id_mentor: number;
   nama_mentor: string;
   nickname_mentor: string;

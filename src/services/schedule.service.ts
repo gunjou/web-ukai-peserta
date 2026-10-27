@@ -42,7 +42,8 @@ export function toSchedule(item: ScheduleApiItem): Schedule {
   return {
     id: item.id_jadwal,
     date: item.tanggal_efektif,
-    name: item.nama_kelas,
+    name: item.nama_kelas || item.nama_kelompok,
+
     start_time: item.waktu_mulai_efektif.slice(0, 5),
     end_time: item.waktu_selesai_efektif.slice(0, 5),
 
@@ -91,14 +92,14 @@ export async function getSchedules(token: string) {
 export async function getScheduleDetail(scheduleId: number, token: string) {
   return apiClient.get<ScheduleDetailResponse>(
     API_ENDPOINTS.SCHEDULE.DETAIL(scheduleId),
-    { token },
+    { token }
   );
 }
 
 export async function getAttendanceStatus(scheduleId: number, token: string) {
   return apiClient.get<AttendanceResponse>(
     API_ENDPOINTS.SCHEDULE.ATTENDANCE(scheduleId),
-    { token },
+    { token }
   );
 }
 
@@ -106,13 +107,13 @@ export async function checkIn(payload: CheckInPayload, token: string) {
   return apiClient.post<{ status: string; message: string }>(
     API_ENDPOINTS.SCHEDULE.CHECK_IN,
     payload,
-    { token },
+    { token }
   );
 }
 
 export async function submitAbsensiSusulan(
   payload: AbsensiSusulanPayload,
-  token: string,
+  token: string
 ) {
   const formData = new FormData();
 
@@ -122,13 +123,13 @@ export async function submitAbsensiSusulan(
   if (payload.alasan_absensi_susulan?.trim()) {
     formData.append(
       "alasan_absensi_susulan",
-      payload.alasan_absensi_susulan.trim(),
+      payload.alasan_absensi_susulan.trim()
     );
   }
 
   return apiClient.post<{ status: string; message: string }>(
     API_ENDPOINTS.SCHEDULE.ABSENSI_SUSULAN,
     formData,
-    { token },
+    { token }
   );
 }

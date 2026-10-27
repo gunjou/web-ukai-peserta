@@ -23,9 +23,11 @@ import {
 } from "@/components/ui/dialog";
 import {
   checkIn,
+  getAttendanceStatus,
   getScheduleDetail,
   toSchedule,
 } from "@/services/schedule.service";
+import type { CheckInPayload } from "@/services/schedule.service";
 import type { Schedule } from "@/types/schedule";
 import LateAttendanceDialog from "./late-attendance-dialog";
 
@@ -34,13 +36,6 @@ interface Props {
   onClose: () => void;
   schedule: Schedule | null;
   token: string | null;
-}
-
-interface CheckInPayload {
-  id_jadwal: number;
-  latitude?: number;
-  longitude?: number;
-  location_accuracy?: number;
 }
 
 function formatDate(date: string) {
@@ -84,7 +79,7 @@ function getWibNow() {
     Number(values.day),
     Number(values.hour),
     Number(values.minute),
-    Number(values.second),
+    Number(values.second)
   );
 }
 
@@ -124,43 +119,42 @@ function getCurrentPosition(): Promise<GeolocationPosition> {
       return;
     }
 
-    let attempts = 0;
-    const maxAttempts = 3;
-
-    const requestLocation = () => {
-      attempts += 1;
-
+    const requestLocation = (allowApproximateLocation: boolean) => {
       navigator.geolocation.getCurrentPosition(
         resolve,
         (error) => {
-          if (
-            (error.code === 2 || error.code === 3) &&
-            attempts < maxAttempts
-          ) {
-            setTimeout(requestLocation, error.code === 2 ? 1500 : 1000);
-            return;
-          }
-
           if (error.code === 1) {
             reject(
               new Error(
-                "Izin lokasi ditolak. Izinkan akses lokasi pada browser.",
-              ),
+                "Izin lokasi ditolak. Izinkan akses lokasi pada browser."
+              )
             );
             return;
           }
 
-          reject(
-            new Error(
-              "Lokasi belum tersedia. Pastikan GPS aktif lalu coba lagi.",
-            ),
-          );
+          if (!allowApproximateLocation) {
+            requestLocation(true);
+            return;
+          }
+
+          if (error.code === 2 || error.code === 3) {
+            reject(
+              new Error(
+                "Lokasi belum tersedia. Pastikan layanan lokasi aktif lalu coba lagi."
+              )
+            );
+            return;
+          }
+
+          reject(new Error("Lokasi perangkat gagal diperoleh."));
         },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+        allowApproximateLocation
+          ? { enableHighAccuracy: false, timeout: 15000, maximumAge: 30000 }
+          : { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
     };
 
-    requestLocation();
+    requestLocation(false);
   });
 }
 
@@ -217,22 +211,76 @@ export default function ScheduleDetailDialog({
 
     async function fetchDetail() {
       try {
-        const result = await getScheduleDetail(
-          currentSchedule.id,
-          currentToken,
-        );
+        const [detailResult, attendanceResult] = await Promise.allSettled([
+          getScheduleDetail(currentSchedule.id, currentToken),
+          getAttendanceStatus(currentSchedule.id, currentToken),
+        ]);
 
         if (cancelled) return;
 
-        const mapped = toSchedule(result.data);
+        if (detailResult.status === "fulfilled") {
+          const mapped = toSchedule(detailResult.value.data);
 
-        setDetail(mapped);
-        setCheckedIn(Boolean(mapped.sudah_absen));
-        setAttendanceStatus(mapped.status_kehadiran ?? null);
+          setDetail(mapped);
+          setCheckedIn(Boolean(mapped.sudah_absen));
+          setAttendanceStatus(mapped.status_kehadiran ?? null);
+        } else {
+          console.error("Gagal mengambil detail jadwal:", detailResult.reason);
+        }
+
+        if (attendanceResult.status === "fulfilled") {
+          const attendance = attendanceResult.value.data;
+          const status = attendance.status_kehadiran?.trim().toUpperCase();
+          const attendanceRecorded = Boolean(
+            attendance.sudah_absen ||
+              attendance.id_absensi_peserta != null ||
+              status === "HADIR"
+          );
+
+          setDetail((current) =>
+            current
+              ? {
+                  ...current,
+                  id_absensi_peserta:
+                    attendance.id_absensi_peserta ??
+                    current.id_absensi_peserta,
+                  status_kehadiran:
+                    attendance.status_kehadiran ??
+                    current.status_kehadiran,
+                  check_in_at: attendance.check_in_at ?? current.check_in_at,
+                  sudah_absen:
+                    attendanceRecorded || Boolean(current.sudah_absen),
+                  jenis_absensi:
+                    attendance.jenis_absensi ?? current.jenis_absensi,
+                  status_verifikasi:
+                    attendance.status_verifikasi ??
+                    current.status_verifikasi,
+                  bukti_kehadiran_url:
+                    attendance.bukti_kehadiran_url ??
+                    current.bukti_kehadiran_url,
+                  alasan_absensi_susulan:
+                    attendance.alasan_absensi_susulan ??
+                    current.alasan_absensi_susulan,
+                  kehadiran_disahkan:
+                    attendance.kehadiran_disahkan ??
+                    current.kehadiran_disahkan,
+                }
+              : current
+          );
+          setCheckedIn((current) => current || attendanceRecorded);
+          setAttendanceStatus(
+            attendance.status_kehadiran ?? currentSchedule.status_kehadiran ?? null
+          );
+        } else {
+          console.error(
+            "Gagal mengambil status kehadiran:",
+            attendanceResult.reason
+          );
+        }
       } catch (requestError) {
         if (cancelled) return;
 
-        console.error("Gagal mengambil detail jadwal:", requestError);
+        console.error("Gagal memuat data jadwal:", requestError);
       } finally {
         if (!cancelled) {
           setLoadingDetail(false);
@@ -267,17 +315,17 @@ export default function ScheduleDetailDialog({
     isLateSubmission && verificationStatus === "menunggu_verifikasi";
   const isApproved = verificationStatus === "disetujui";
   const isRejected = isLateSubmission && verificationStatus === "ditolak";
+  const hasAttendanceRecord =
+    Boolean(detail.sudah_absen) || detail.id_absensi_peserta != null;
 
   const hasAttended = isLateSubmission
     ? isApproved || detail.kehadiran_disahkan === true
     : Boolean(
-        checkedIn ||
-        attendanceStatus?.trim().toUpperCase() === "HADIR" ||
-        detail.kehadiran_disahkan,
+        hasAttendanceRecord ||
+          checkedIn ||
+          attendanceStatus?.trim().toUpperCase() === "HADIR" ||
+          detail.kehadiran_disahkan
       );
-
-  const hasAttendanceRecord =
-    Boolean(detail.sudah_absen) || detail.id_absensi_peserta != null;
 
   const canSubmitLateAttendance =
     isScheduleFinished(detail) && !hasAttendanceRecord;
@@ -315,7 +363,7 @@ export default function ScheduleDetailDialog({
               status_verifikasi: "tidak_perlu_verifikasi",
               kehadiran_disahkan: true,
             }
-          : current,
+          : current
       );
 
       setAttendanceAvailable(false);
@@ -325,7 +373,7 @@ export default function ScheduleDetailDialog({
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Kehadiran belum dapat ditandai.",
+          : "Kehadiran belum dapat ditandai."
       );
     } finally {
       setCheckingIn(false);
@@ -357,7 +405,11 @@ export default function ScheduleDetailDialog({
             <div>
               <h2 className="text-base font-semibold">{detail.name}</h2>
               <div
-                className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${isOnline ? "bg-accent-blue/10 text-accent-blue" : "bg-muted text-primary"}`}
+                className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+                  isOnline
+                    ? "bg-accent-blue/10 text-accent-blue"
+                    : "bg-muted text-primary"
+                }`}
               >
                 {isOnline ? (
                   <Video className="h-3.5 w-3.5" />
@@ -525,10 +577,10 @@ export default function ScheduleDetailDialog({
                   (hasAttended
                     ? "Kehadiran Anda sudah tercatat."
                     : attendanceAvailable
-                      ? "Anda dapat menandai kehadiran sekarang."
-                      : canSubmitLateAttendance
-                        ? "Jadwal telah berakhir dan absensi belum tercatat."
-                        : "Tombol absensi tersedia sesuai waktu dan status jadwal.")}
+                    ? "Anda dapat menandai kehadiran sekarang."
+                    : canSubmitLateAttendance
+                    ? "Jadwal telah berakhir dan absensi belum tercatat."
+                    : "Tombol absensi tersedia sesuai waktu dan status jadwal.")}
               </p>
             </div>
           </div>
@@ -551,14 +603,14 @@ export default function ScheduleDetailDialog({
                   status_verifikasi: "menunggu_verifikasi",
                   kehadiran_disahkan: false,
                 }
-              : current,
+              : current
           );
 
           setCheckedIn(false);
           setAttendanceStatus(null);
 
           setSuccessMessage(
-            "Pengajuan absensi susulan berhasil dikirim dan menunggu verifikasi.",
+            "Pengajuan absensi susulan berhasil dikirim dan menunggu verifikasi."
           );
 
           setError(null);
