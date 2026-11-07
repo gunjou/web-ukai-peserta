@@ -161,7 +161,7 @@ function getCurrentPosition(): Promise<GeolocationPosition> {
 function getVerificationLabel(status?: string | null) {
   switch (status) {
     case "menunggu_verifikasi":
-      return "Menunggu verifikasi";
+      return "Absensi susulan berhasil ";
     case "disetujui":
       return "Absensi susulan disetujui";
     case "ditolak":
@@ -242,19 +242,16 @@ export default function ScheduleDetailDialog({
               ? {
                   ...current,
                   id_absensi_peserta:
-                    attendance.id_absensi_peserta ??
-                    current.id_absensi_peserta,
+                    attendance.id_absensi_peserta ?? current.id_absensi_peserta,
                   status_kehadiran:
-                    attendance.status_kehadiran ??
-                    current.status_kehadiran,
+                    attendance.status_kehadiran ?? current.status_kehadiran,
                   check_in_at: attendance.check_in_at ?? current.check_in_at,
                   sudah_absen:
                     attendanceRecorded || Boolean(current.sudah_absen),
                   jenis_absensi:
                     attendance.jenis_absensi ?? current.jenis_absensi,
                   status_verifikasi:
-                    attendance.status_verifikasi ??
-                    current.status_verifikasi,
+                    attendance.status_verifikasi ?? current.status_verifikasi,
                   bukti_kehadiran_url:
                     attendance.bukti_kehadiran_url ??
                     current.bukti_kehadiran_url,
@@ -262,14 +259,15 @@ export default function ScheduleDetailDialog({
                     attendance.alasan_absensi_susulan ??
                     current.alasan_absensi_susulan,
                   kehadiran_disahkan:
-                    attendance.kehadiran_disahkan ??
-                    current.kehadiran_disahkan,
+                    attendance.kehadiran_disahkan ?? current.kehadiran_disahkan,
                 }
               : current
           );
           setCheckedIn((current) => current || attendanceRecorded);
           setAttendanceStatus(
-            attendance.status_kehadiran ?? currentSchedule.status_kehadiran ?? null
+            attendance.status_kehadiran ??
+              currentSchedule.status_kehadiran ??
+              null
           );
         } else {
           console.error(
@@ -516,8 +514,8 @@ export default function ScheduleDetailDialog({
                 </div>
               ) : isPending ? (
                 <div className="flex items-center justify-center gap-2 rounded-xl dark:bg-amber-100 px-4 py-2.5 text-sm font-semibold dark:text-amber-800 transition-colors bg-amber-900/40 text-amber-300">
-                  <Clock className="h-4 w-4" />
-                  Menunggu verifikasi absensi susulan
+                  <CheckCircle2 className="h-4 w-4" />
+                  Absensi susulan berhasil
                 </div>
               ) : isRejected ? (
                 <div className="rounded-xl dark:bg-red-100 px-4 py-3 text-sm font-medium dark:text-red-800 transition-colors bg-red-900/40 text-red-300">
@@ -609,9 +607,7 @@ export default function ScheduleDetailDialog({
           setCheckedIn(false);
           setAttendanceStatus(null);
 
-          setSuccessMessage(
-            "Pengajuan absensi susulan berhasil dikirim dan menunggu verifikasi."
-          );
+          setSuccessMessage("Pengajuan absensi susulan berhasil.");
 
           setError(null);
         }}
