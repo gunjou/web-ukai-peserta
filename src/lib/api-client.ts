@@ -30,6 +30,10 @@ async function request<T>(
 
       ...headers,
     },
+  }).catch(() => {
+    throw new Error(
+      "Tidak dapat terhubung ke server. Periksa koneksi internet Anda lalu coba lagi.",
+    );
   });
 
   if (!response.ok) {
@@ -37,6 +41,10 @@ async function request<T>(
 
     if (error?.message?.includes("session invalid")) {
       handleSessionInvalid();
+    }
+
+    if (error?.message === "session expired") {
+      throw new Error("Sesi login Anda telah berakhir. Silakan login ulang.");
     }
 
     throw new Error(error?.message || `Terjadi kesalahan (${response.status})`);

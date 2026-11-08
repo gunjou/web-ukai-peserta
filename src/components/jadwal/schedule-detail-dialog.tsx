@@ -12,7 +12,7 @@ import {
   Video,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   Dialog,
@@ -28,7 +28,7 @@ import {
   toSchedule,
 } from "@/services/schedule.service";
 import type { CheckInPayload } from "@/services/schedule.service";
-import type { Schedule } from "@/types/schedule";
+import type { AttendanceStatus, Schedule } from "@/types/schedule";
 import LateAttendanceDialog from "./late-attendance-dialog";
 
 interface Props {
@@ -126,7 +126,7 @@ function getCurrentPosition(): Promise<GeolocationPosition> {
           if (error.code === 1) {
             reject(
               new Error(
-                "Izin lokasi ditolak. Izinkan akses lokasi pada browser."
+                "Izin lokasi ditolak. Izinkan akses lokasi pada browser lalu coba lagi."
               )
             );
             return;
@@ -137,10 +137,19 @@ function getCurrentPosition(): Promise<GeolocationPosition> {
             return;
           }
 
-          if (error.code === 2 || error.code === 3) {
+          if (error.code === 2) {
             reject(
               new Error(
-                "Lokasi belum tersedia. Pastikan layanan lokasi aktif lalu coba lagi."
+                "Lokasi perangkat tidak terbaca. Aktifkan GPS/layanan lokasi lalu coba lagi."
+              )
+            );
+            return;
+          }
+
+          if (error.code === 3) {
+            reject(
+              new Error(
+                "Pengambilan lokasi terlalu lama. Pindah ke area terbuka atau periksa koneksi lalu coba lagi."
               )
             );
             return;
@@ -183,6 +192,8 @@ export default function ScheduleDetailDialog({
   const [checkedIn, setCheckedIn] = useState(false);
   const [attendanceStatus, setAttendanceStatus] = useState<string | null>(null);
   const [checkingIn, setCheckingIn] = useState(false);
+  const [mentorStatus, setMentorStatus] =
+    useState<AttendanceStatus["status_mentor"]>(undefined);
 
   const [lateDialogOpen, setLateDialogOpen] = useState(false);
 
@@ -206,6 +217,7 @@ export default function ScheduleDetailDialog({
     setDetail(currentSchedule);
     setCheckedIn(Boolean(currentSchedule.sudah_absen));
     setAttendanceStatus(currentSchedule.status_kehadiran ?? null);
+    setMentorStatus(undefined);
     setError(null);
     setSuccessMessage(null);
 
@@ -231,6 +243,9 @@ export default function ScheduleDetailDialog({
         if (attendanceResult.status === "fulfilled") {
           const attendance = attendanceResult.value.data;
           const status = attendance.status_kehadiran?.trim().toUpperCase();
+
+          setMentorStatus(attendance.status_mentor);
+
           const attendanceRecorded = Boolean(
             attendance.sudah_absen ||
               attendance.id_absensi_peserta != null ||
@@ -303,6 +318,27 @@ export default function ScheduleDetailDialog({
     };
   }, [schedule, open, token]);
 
+  const refreshMentorStatus = useCallback(async () => {
+    if (!schedule || !token) return;
+
+    try {
+      const response = await getAttendanceStatus(schedule.id, token);
+
+      setMentorStatus(response.data.status_mentor);
+    } catch (requestError) {
+      console.error("Gagal memperbarui status mentor:", requestError);
+    }
+  }, [schedule, token]);
+
+  // Tombol harus terbuka sendiri begitu mentor memulai kelas.
+  useEffect(() => {
+    if (!open || checkedIn || mentorStatus === "SELESAI") return;
+
+    const interval = setInterval(refreshMentorStatus, 15000);
+
+    return () => clearInterval(interval);
+  }, [open, checkedIn, mentorStatus, refreshMentorStatus]);
+
   if (!detail) return null;
 
   const isOnline = detail.meeting_type === "online";
@@ -325,8 +361,11 @@ export default function ScheduleDetailDialog({
           detail.kehadiran_disahkan
       );
 
+  const waitingForMentor = mentorStatus === "BELUM_MULAI";
+  const mentorFinished = mentorStatus === "SELESAI";
+
   const canSubmitLateAttendance =
-    isScheduleFinished(detail) && !hasAttendanceRecord;
+    (isScheduleFinished(detail) || mentorFinished) && !hasAttendanceRecord;
 
   async function handleCheckIn() {
     if (!token || !detail || checkingIn || hasAttendanceRecord) return;
@@ -373,6 +412,7 @@ export default function ScheduleDetailDialog({
           ? requestError.message
           : "Kehadiran belum dapat ditandai."
       );
+      void refreshMentorStatus();
     } finally {
       setCheckingIn(false);
     }
@@ -538,7 +578,10 @@ export default function ScheduleDetailDialog({
                 <button
                   type="button"
                   disabled={
-                    !attendanceAvailable || checkingIn || hasAttendanceRecord
+                    !attendanceAvailable ||
+                    checkingIn ||
+                    hasAttendanceRecord ||
+                    waitingForMentor
                   }
                   onClick={handleCheckIn}
                   className="mx-auto flex w-auto items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
@@ -574,11 +617,15 @@ export default function ScheduleDetailDialog({
                   verificationLabel ||
                   (hasAttended
                     ? "Kehadiran Anda sudah tercatat."
+                    : canSubmitLateAttendance
+                    ? mentorFinished
+                      ? "Mentor sudah menutup kelas dan absensi Anda belum tercatat. Silakan ajukan absensi susulan."
+                      : "Jadwal telah berakhir dan absensi Anda belum tercatat. Silakan ajukan absensi susulan."
+                    : attendanceAvailable && waitingForMentor
+                    ? "Menunggu mentor memulai kelas. Tombol aktif otomatis setelah mentor check-in."
                     : attendanceAvailable
                     ? "Anda dapat menandai kehadiran sekarang."
-                    : canSubmitLateAttendance
-                    ? "Jadwal telah berakhir dan absensi belum tercatat."
-                    : "Tombol absensi tersedia sesuai waktu dan status jadwal.")}
+                    : `Absensi dibuka pukul ${detail.start_time} WIB.`)}
               </p>
             </div>
           </div>

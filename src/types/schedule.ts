@@ -88,6 +88,7 @@ export interface AttendanceStatus {
   status_kehadiran: string | null;
   check_in_at: string | null;
   sudah_absen: boolean;
+  status_mentor?: "BELUM_MULAI" | "BERLANGSUNG" | "SELESAI";
 
   // Late attendance
   jenis_absensi?: JenisAbsensi | null;
