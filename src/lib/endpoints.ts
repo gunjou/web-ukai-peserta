@@ -30,7 +30,7 @@ export const API_ENDPOINTS = {
     CHECK_IN: "/api/v2/absensi/peserta/me/check-in",
     ABSENSI_SUSULAN: "/api/v2/absensi/peserta/me/absensi-susulan",
     ATTENDANCE: (scheduleId: number) =>
-      `/api/v2/absensi/peserta/me/${scheduleId}`,
+      `/api/v2/absensi/peserta/me/jadwal/${scheduleId}`,
   },
 
   TRYOUT: {

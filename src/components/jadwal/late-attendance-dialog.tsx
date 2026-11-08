@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { compressToJpeg } from "@/lib/compress-image";
 import { submitAbsensiSusulan } from "@/services/schedule.service";
 
 interface Props {
@@ -50,16 +51,6 @@ export default function LateAttendanceDialog({
       return;
     }
 
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setError("Foto harus berformat JPEG, PNG, atau WebP.");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Ukuran foto maksimal 5 MB.");
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
@@ -67,7 +58,7 @@ export default function LateAttendanceDialog({
       await submitAbsensiSusulan(
         {
           id_jadwal: scheduleId,
-          file,
+          file: await compressToJpeg(file),
           alasan_absensi_susulan: reason.trim() || undefined,
         },
         token,
@@ -128,7 +119,7 @@ export default function LateAttendanceDialog({
                   {file?.name ?? "Pilih foto"}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  JPEG, PNG, WebP · Maks. 5 MB
+                  JPEG, PNG, WebP · Otomatis diperkecil
                 </span>
               </span>
             </label>
