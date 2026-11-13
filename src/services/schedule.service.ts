@@ -32,6 +32,12 @@ export interface CheckInPayload {
   longitude?: number;
 }
 
+export interface CekLokasiResult {
+  siap: boolean;
+  kode: "SIAP" | "OUTSIDE_RADIUS" | "GPS_ACCURACY_LOW";
+  pesan: string;
+}
+
 export interface AbsensiSusulanPayload {
   id_jadwal: number;
   file: File;
@@ -106,6 +112,14 @@ export async function getAttendanceStatus(scheduleId: number, token: string) {
 export async function checkIn(payload: CheckInPayload, token: string) {
   return apiClient.post<{ status: string; message: string }>(
     API_ENDPOINTS.SCHEDULE.CHECK_IN,
+    payload,
+    { token }
+  );
+}
+
+export async function cekLokasiCheckIn(payload: CheckInPayload, token: string) {
+  return apiClient.post<{ status: string; data: CekLokasiResult }>(
+    API_ENDPOINTS.SCHEDULE.CEK_LOKASI,
     payload,
     { token }
   );

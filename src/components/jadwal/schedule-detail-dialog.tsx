@@ -29,7 +29,9 @@ import {
 } from "@/services/schedule.service";
 import type { CheckInPayload } from "@/services/schedule.service";
 import type { AttendanceStatus, Schedule } from "@/types/schedule";
+import CheckInLocationIndicator from "./check-in-location-indicator";
 import LateAttendanceDialog from "./late-attendance-dialog";
+import { useCheckInLocation } from "./use-check-in-location";
 
 interface Props {
   open: boolean;
@@ -110,61 +112,6 @@ function isScheduleFinished(schedule: Schedule | null) {
     getWibNow().getTime() >
     createWibDate(schedule.date, schedule.end_time).getTime()
   );
-}
-
-function getCurrentPosition(): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error("Lokasi perangkat tidak tersedia."));
-      return;
-    }
-
-    const requestLocation = (allowApproximateLocation: boolean) => {
-      navigator.geolocation.getCurrentPosition(
-        resolve,
-        (error) => {
-          if (error.code === 1) {
-            reject(
-              new Error(
-                "Izin lokasi ditolak. Izinkan akses lokasi pada browser lalu coba lagi."
-              )
-            );
-            return;
-          }
-
-          if (!allowApproximateLocation) {
-            requestLocation(true);
-            return;
-          }
-
-          if (error.code === 2) {
-            reject(
-              new Error(
-                "Lokasi perangkat tidak terbaca. Aktifkan GPS/layanan lokasi lalu coba lagi."
-              )
-            );
-            return;
-          }
-
-          if (error.code === 3) {
-            reject(
-              new Error(
-                "Pengambilan lokasi terlalu lama. Pindah ke area terbuka atau periksa koneksi lalu coba lagi."
-              )
-            );
-            return;
-          }
-
-          reject(new Error("Lokasi perangkat gagal diperoleh."));
-        },
-        allowApproximateLocation
-          ? { enableHighAccuracy: false, timeout: 15000, maximumAge: 30000 }
-          : { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-      );
-    };
-
-    requestLocation(false);
-  });
 }
 
 function getVerificationLabel(status?: string | null) {
@@ -339,6 +286,23 @@ export default function ScheduleDetailDialog({
     return () => clearInterval(interval);
   }, [open, checkedIn, mentorStatus, refreshMentorStatus]);
 
+  // GPS hanya dipantau selama tombol absensi offline memang bisa dipakai.
+  const locationWatchEnabled = Boolean(
+    open &&
+      detail &&
+      detail.meeting_type !== "online" &&
+      attendanceAvailable &&
+      mentorStatus === "BERLANGSUNG" &&
+      !checkedIn &&
+      !detail.sudah_absen &&
+      detail.id_absensi_peserta == null
+  );
+  const checkInLocation = useCheckInLocation(
+    detail?.id,
+    token,
+    locationWatchEnabled
+  );
+
   if (!detail) return null;
 
   const isOnline = detail.meeting_type === "online";
@@ -379,11 +343,15 @@ export default function ScheduleDetailDialog({
       const payload: CheckInPayload = { id_jadwal: detail.id };
 
       if (!online) {
-        const position = await getCurrentPosition();
+        const position = checkInLocation.position;
 
-        payload.latitude = position.coords.latitude;
-        payload.longitude = position.coords.longitude;
-        payload.location_accuracy = position.coords.accuracy;
+        if (!position) {
+          throw new Error("Tunggu indikator lokasi menunjukkan siap absen.");
+        }
+
+        payload.latitude = position.latitude;
+        payload.longitude = position.longitude;
+        payload.location_accuracy = position.accuracy;
       }
 
       await checkIn(payload, token);
@@ -575,23 +543,37 @@ export default function ScheduleDetailDialog({
                   Ajukan Absensi Susulan
                 </button>
               ) : (
-                <button
-                  type="button"
-                  disabled={
-                    !attendanceAvailable ||
-                    checkingIn ||
-                    hasAttendanceRecord ||
-                    waitingForMentor
-                  }
-                  onClick={handleCheckIn}
-                  className="mx-auto flex w-auto items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {checkingIn ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "Tandai Hadir"
-                  )}
-                </button>
+                <>
+                  <CheckInLocationIndicator location={checkInLocation} />
+
+                  <button
+                    type="button"
+                    disabled={
+                      !attendanceAvailable ||
+                      checkingIn ||
+                      hasAttendanceRecord ||
+                      waitingForMentor ||
+                      (!isOnline && checkInLocation.phase !== "ready")
+                    }
+                    onClick={handleCheckIn}
+                    className={`mx-auto flex w-auto items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-all duration-300 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 ${
+                      !isOnline && checkInLocation.phase === "ready"
+                        ? "scale-105 shadow-lg shadow-primary/30 ring-2 ring-emerald-500/50 ring-offset-2 ring-offset-background"
+                        : ""
+                    }`}
+                  >
+                    {checkingIn ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        {!isOnline && checkInLocation.phase === "ready" && (
+                          <CheckCircle2 className="h-4 w-4" />
+                        )}
+                        Tandai Hadir
+                      </>
+                    )}
+                  </button>
+                </>
               )}
 
               {detail.bukti_kehadiran_url && (
@@ -623,6 +605,10 @@ export default function ScheduleDetailDialog({
                       : "Jadwal telah berakhir dan absensi Anda belum tercatat. Silakan ajukan absensi susulan."
                     : attendanceAvailable && waitingForMentor
                     ? "Menunggu mentor memulai kelas. Tombol aktif otomatis setelah mentor check-in."
+                    : attendanceAvailable &&
+                      !isOnline &&
+                      checkInLocation.phase !== "ready"
+                    ? "Tombol aktif otomatis saat indikator lokasi siap."
                     : attendanceAvailable
                     ? "Anda dapat menandai kehadiran sekarang."
                     : `Absensi dibuka pukul ${detail.start_time} WIB.`)}
